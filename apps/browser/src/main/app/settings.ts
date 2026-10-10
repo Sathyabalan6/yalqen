@@ -29,6 +29,7 @@ const DEFAULTS: Settings = {
   searchEngine: DEFAULT_SEARCH_ENGINE,
   customSearchTemplate: null,
   theme: 'light',
+  transparency: true,
   startupBehavior: 'restore',
   homePageUrl: null,
   startupUrls: [],
@@ -91,6 +92,7 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     searchEngine,
     customSearchTemplate,
     theme,
+    transparency,
     startupBehavior,
     homePageUrl,
     startupUrls,
@@ -141,6 +143,7 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
         ? customSearchTemplate?.trim() || null
         : base.customSearchTemplate,
     theme: typeof theme === 'string' && THEMES.has(theme) ? (theme as ThemeSource) : base.theme,
+    transparency: typeof transparency === 'boolean' ? transparency : base.transparency,
     startupBehavior:
       typeof startupBehavior === 'string' && STARTUP_BEHAVIORS.has(startupBehavior)
         ? (startupBehavior as Settings['startupBehavior'])

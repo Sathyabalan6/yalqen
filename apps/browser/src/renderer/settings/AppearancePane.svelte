@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import {
     DEFAULT_ZOOM_FACTORS,
@@ -8,6 +9,7 @@
     type ToolbarButtonId,
   } from '../../shared/types';
   import { t } from '../../shared/i18n';
+  import Button from '../ui/Button.svelte';
   import Icon, { type IconName } from '../ui/Icon.svelte';
   import IconButton from '../ui/IconButton.svelte';
   import SegmentedControl from '../ui/SegmentedControl.svelte';
@@ -17,6 +19,10 @@
 
   let { values, update }: { values: SettingsValues; update: (patch: Partial<SettingsValues>) => Promise<void> } =
     $props();
+
+  const api = window.yalqenSettings;
+  const startupTransparency = untrack(() => values.transparency);
+  const transparencyChanged = $derived(values.transparency !== startupTransparency);
 
   const themeOptions = [
     { value: 'system', label: t('settings.themeSystem') },
@@ -95,6 +101,16 @@
     value={values.theme}
     onchange={(value) => update({ theme: value })}
   />
+</SettingRow>
+<SettingRow title={t('settings.transparency')} hint={t('settings.transparencyHint')}>
+  <Switch
+    label={t('settings.transparency')}
+    checked={values.transparency}
+    onchange={(checked) => update({ transparency: checked })}
+  />
+  {#if transparencyChanged}
+    <Button variant="primary" onclick={() => api.relaunch()}>{t('settings.restartNow')}</Button>
+  {/if}
 </SettingRow>
 
 <h2>{t('settings.pages')}</h2>

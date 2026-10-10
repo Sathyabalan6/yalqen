@@ -866,6 +866,8 @@ export const tr: Record<MessageKey, string> = {
   'settings.pageZoomHint': 'Kendi yakınlaştırması kaydedilmemiş sayfalara uygulanır.',
   'settings.menus': 'Menüler',
   'settings.sidebar': 'Yan menü',
+  'settings.transparency': 'Şeffaflık',
+  'settings.transparencyHint': 'Kapatınca pencere açık veya koyu modda düz renk olur. Yeniden başlatınca geçerli olur.',
   'settings.pinnedTabs': 'Sabitlenmiş sekmeler',
   'settings.pinnedAlways': 'Her zaman',
   'settings.pinnedExpanded': 'Sadece geniş menüde',

@@ -779,10 +779,6 @@
     flex-basis: auto;
   }
 
-  .favorite:not(.active) .favicon {
-    opacity: 0.7;
-  }
-
   .favorite.discarded .favicon {
     opacity: 0.45;
     filter: grayscale(1);

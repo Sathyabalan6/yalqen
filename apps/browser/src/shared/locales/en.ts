@@ -859,6 +859,8 @@ export const en = {
   'settings.pageZoomHint': 'Applies to pages without a saved zoom level.',
   'settings.menus': 'Toolbar and sidebar',
   'settings.sidebar': 'Sidebar',
+  'settings.transparency': 'Transparency',
+  'settings.transparencyHint': 'Turn off to use a solid window in light or dark mode. Takes effect after a restart.',
   'settings.pinnedTabs': 'Pinned tabs',
   'settings.pinnedAlways': 'Always',
   'settings.pinnedExpanded': 'Wide sidebar only',

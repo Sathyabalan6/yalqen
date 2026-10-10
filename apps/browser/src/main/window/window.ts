@@ -107,6 +107,9 @@ const REVEAL_FALLBACK_MS = 1000;
 const MAX_PICKED_ELEMENTS = 5;
 const MAX_AGENT_PROJECTS = 6;
 
+// Native glass cannot be removed from a live window, so every window follows the value read at launch.
+let startupTransparency: boolean | null = null;
+
 export interface AppContext {
   icon: string;
   daily: Session;
@@ -208,7 +211,7 @@ export class YalqenWindow {
     pageRadius: 16,
     newTabCenterOffset: 0,
   };
-  private glassApplied = glassAvailable;
+  private glassApplied: boolean;
   private revealed = false;
   private htmlFullScreenTabId: string | null = null;
   private pushQueued = false;
@@ -223,6 +226,8 @@ export class YalqenWindow {
     private readonly app: AppContext,
     options: WindowOptions,
   ) {
+    startupTransparency ??= app.settings.get().transparency;
+    this.glassApplied = glassAvailable && startupTransparency;
     this.isDeveloper = options.developer ?? false;
     this.isPrivate = this.isDeveloper || (options.isPrivate ?? false);
     this.webApp = this.isPrivate ? null : (options.webApp ?? null);
@@ -236,7 +241,7 @@ export class YalqenWindow {
       title: `${this.isDeveloper ? t('window.titleDeveloper') : this.isPrivate ? t('window.titlePrivate') : 'Yalqen'} · ${app.persistentProfiles.currentName()}`,
       icon: app.icon,
       titleBarStyle: 'hiddenInset',
-      transparent: glassAvailable,
+      transparent: this.glassApplied,
       show: false,
     });
 
@@ -250,7 +255,7 @@ export class YalqenWindow {
     });
     this.uiContents = this.ui.webContents;
     this.activeProjectId = this.addProject().id;
-    if (glassAvailable) this.ui.setBackgroundColor('#00000000');
+    if (this.glassApplied) this.ui.setBackgroundColor('#00000000');
     this.uiContents.on('will-navigate', (event) => event.preventDefault());
     this.uiContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     this.window.contentView.addChildView(this.ui);
@@ -467,7 +472,7 @@ export class YalqenWindow {
 
     nativeTheme.on('updated', this.pushState);
     this.uiContents.once('did-finish-load', () => {
-      this.glassApplied = applyGlass(this.window);
+      this.glassApplied = this.glassApplied && applyGlass(this.window);
       this.pushState();
       void this.sendWallpaper();
     });

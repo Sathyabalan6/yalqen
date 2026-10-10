@@ -679,6 +679,7 @@ export interface SettingsValues {
   searchEngine: SearchEngineId;
   customSearchTemplate: string | null;
   theme: ThemeSource;
+  transparency: boolean;
   startupBehavior: 'restore' | 'new-tab' | 'pages';
   homePageUrl: string | null;
   startupUrls: string[];
