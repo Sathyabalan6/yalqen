@@ -154,7 +154,6 @@ export function parseChromiumBookmarks(data: unknown): ParsedBookmarks {
 
 // Profiles of installed Chromium browsers that contain `fileName` (e.g. `Bookmarks`, `History`).
 export function chromiumProfiles(fileName: string, appSupport = APP_SUPPORT): ImportSource[] {
-  if (process.platform !== 'darwin') return [];
   return CHROMIUM_BROWSERS.flatMap(([browser, dir]) => {
     const root = path.join(appSupport, dir);
     let entries: string[];
@@ -190,7 +189,12 @@ function profileNames(root: string): Record<string, string> {
 }
 
 export async function importChromiumBookmarks(store: BookmarkStore, file: string): Promise<BookmarkImportResult> {
-  const parsed = parseChromiumBookmarks(JSON.parse(await fs.promises.readFile(file, 'utf8')));
+  let parsed: ParsedBookmarks;
+  try {
+    parsed = parseChromiumBookmarks(JSON.parse(await fs.promises.readFile(file, 'utf8')));
+  } catch {
+    parsed = { bookmarks: [], folders: [], skipped: 0 };
+  }
   const added = store.importBookmarks(parsed.bookmarks, parsed.folders);
   return { ...added, skipped: parsed.skipped + parsed.bookmarks.length - added.bookmarks };
 }
