@@ -235,7 +235,7 @@ export class YalqenWindow {
       minHeight: 400,
       title: `${this.isDeveloper ? t('window.titleDeveloper') : this.isPrivate ? t('window.titlePrivate') : 'Yalqen'} · ${app.persistentProfiles.currentName()}`,
       icon: app.icon,
-      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
       transparent: process.platform === 'darwin' ? glassAvailable : false,
       show: false,
     });
