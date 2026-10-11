@@ -189,12 +189,8 @@ function profileNames(root: string): Record<string, string> {
 }
 
 export async function importChromiumBookmarks(store: BookmarkStore, file: string): Promise<BookmarkImportResult> {
-  let parsed: ParsedBookmarks;
-  try {
-    parsed = parseChromiumBookmarks(JSON.parse(await fs.promises.readFile(file, 'utf8')));
-  } catch {
-    parsed = { bookmarks: [], folders: [], skipped: 0 };
-  }
+  const content = await fs.promises.readFile(file, 'utf8');
+  const parsed = parseChromiumBookmarks(JSON.parse(content));
   const added = store.importBookmarks(parsed.bookmarks, parsed.folders);
   return { ...added, skipped: parsed.skipped + parsed.bookmarks.length - added.bookmarks };
 }
