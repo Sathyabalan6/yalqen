@@ -131,16 +131,14 @@ app
       'M83',
     );
     assert.equal(
-      await window.webContents.executeJavaScript("document.querySelector('.player .times span').textContent"),
-      '1:00',
+      await window.webContents.executeJavaScript(
+        "document.querySelector('.player .track').getAttribute('aria-valuenow')",
+      ),
+      '60',
     );
 
     await click('.player .play');
     assert.deepEqual(actions.at(-1), { type: 'toggle-media', id: 'b' });
-    await click('.player .skip');
-    assert.deepEqual(actions.at(-1), { type: 'seek-media', id: 'b', seconds: -10 });
-    await click('.player .skip:last-child');
-    assert.deepEqual(actions.at(-1), { type: 'seek-media', id: 'b', seconds: 10 });
     await click('.player .info');
     assert.deepEqual(actions.at(-1), { type: 'activate-tab', id: 'b' });
 
@@ -157,7 +155,7 @@ app
     push({ media: { ...song, playing: false, updatedAt: Date.now() } });
     await eventually("document.querySelector('.player .play')?.getAttribute('aria-label') === 'Play'");
 
-    // Live streams have no length, so the bar and times go away while the controls stay.
+    // Live streams have no length, so the bar goes away while the button stays.
     push({ media: { ...song, duration: null, position: null, updatedAt: Date.now() } });
     await eventually("!document.querySelector('.player .track') && !!document.querySelector('.player .play')");
 
