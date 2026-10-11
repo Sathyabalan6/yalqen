@@ -189,8 +189,7 @@ function profileNames(root: string): Record<string, string> {
 }
 
 export async function importChromiumBookmarks(store: BookmarkStore, file: string): Promise<BookmarkImportResult> {
-  const content = await fs.promises.readFile(file, 'utf8');
-  const parsed = parseChromiumBookmarks(JSON.parse(content));
+  const parsed = parseChromiumBookmarks(JSON.parse(await fs.promises.readFile(file, 'utf8')));
   const added = store.importBookmarks(parsed.bookmarks, parsed.folders);
   return { ...added, skipped: parsed.skipped + parsed.bookmarks.length - added.bookmarks };
 }
@@ -199,16 +198,9 @@ export async function importBookmarkFile(store: BookmarkStore, file: string): Pr
   if (isFirefoxPlaces(file)) return importFirefoxBookmarks(store, file);
   const { readBookmarkFile, parseBookmarkHtml } = await import('./bookmark-html.js');
   const text = await readBookmarkFile(file);
-  let parsed: ParsedBookmarks;
-  if (text.trimStart().startsWith('<')) {
-    parsed = await parseBookmarkHtml(text);
-  } else {
-    try {
-      parsed = parseChromiumBookmarks(JSON.parse(text));
-    } catch {
-      parsed = { bookmarks: [], folders: [], skipped: 0 };
-    }
-  }
+  const parsed = text.trimStart().startsWith('<')
+    ? await parseBookmarkHtml(text)
+    : parseChromiumBookmarks(JSON.parse(text));
   const added = store.importBookmarks(parsed.bookmarks, parsed.folders);
   return { ...added, skipped: parsed.skipped + parsed.bookmarks.length - added.bookmarks };
 }

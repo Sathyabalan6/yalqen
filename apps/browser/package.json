@@ -125,10 +125,7 @@
         "x-scheme-handler/http",
         "x-scheme-handler/https"
       ],
-      "artifactName": "Yalqen-${version}-${arch}.${ext}",
-      "desktop": {
-        "Exec": "AppRun %U"
-      }
+      "artifactName": "Yalqen-${version}-${arch}.${ext}"
     },
     "electronLanguages": [
       "tr",
