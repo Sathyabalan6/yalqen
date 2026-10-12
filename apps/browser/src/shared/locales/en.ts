@@ -261,8 +261,6 @@ export const en = {
   'findBar.pageTitle': 'Find',
 
   'format.newTab': 'New tab',
-  'format.consoleErrors': '{count} console errors',
-  'format.consoleErrors.one': '{count} console error',
   'format.cacheOff': 'cache off',
   'format.offline': 'offline',
   'format.networkThrottled': 'network throttled',
@@ -1039,8 +1037,6 @@ export const en = {
   'devCommands.pickElement': 'Select element for agent',
   'devCommands.pickElementKeywords': 'pick inspect element select agent ai claude codex',
 
-  'devMenu.consoleErrors': '{count} Errors in Console',
-  'devMenu.consoleErrors.one': '{count} Error in Console',
   'devMenu.disableCache': 'Disable Cache',
   'devMenu.network': 'Network',
   'devMenu.noThrottling': 'No Throttling',

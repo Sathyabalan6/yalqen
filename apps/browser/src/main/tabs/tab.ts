@@ -26,7 +26,6 @@ export interface Tab {
   edited: boolean;
   interacted: boolean;
   blockedPopups: string[];
-  consoleErrors: number;
   overrides: PageOverrides;
   autoReload: { seconds: number; dueAt: number } | null;
   pageLanguage: string | null;
@@ -67,7 +66,6 @@ export function createTab(saved: Partial<SavedTab> & { url: string }, isPrivate 
     edited: false,
     interacted: false,
     blockedPopups: [],
-    consoleErrors: 0,
     overrides: NO_OVERRIDES,
     autoReload: null,
     pageLanguage: null,

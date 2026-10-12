@@ -12,7 +12,6 @@ import { t } from '../../shared/i18n.js';
 
 interface DevMenuState {
   agentEpisode?: AgentEpisodePreview | null;
-  consoleErrors: number;
   autoReloadSeconds: number | null;
   overrides: PageOverrides;
 }
@@ -22,7 +21,6 @@ interface DevMenuActions {
   fixEpisode?(): void;
   copyEpisode?(id: string): void;
   copyPlaywrightTest?(id: string): void;
-  openDevTools(): void;
 }
 
 function radio(label: string, checked: boolean, click: () => void): MenuItemConstructorOptions {
@@ -30,7 +28,7 @@ function radio(label: string, checked: boolean, click: () => void): MenuItemCons
 }
 
 export function devMenuTemplate(state: DevMenuState, actions: DevMenuActions): MenuItemConstructorOptions[] {
-  const { overrides, consoleErrors } = state;
+  const { overrides } = state;
   const run = (id: DevCommandId) => () => actions.run(id);
   const episode = state.agentEpisode;
   return [
@@ -41,15 +39,6 @@ export function devMenuTemplate(state: DevMenuState, actions: DevMenuActions): M
           ...(actions.fixEpisode ? [{ label: t('devMenu.fixWithClaude'), click: actions.fixEpisode }] : []),
           { label: t('devMenu.copyEpisode', { id: episode.id }), click: () => actions.copyEpisode?.(episode.id) },
           { label: t('devMenu.copyPlaywrightTest'), click: () => actions.copyPlaywrightTest?.(episode.id) },
-          { type: 'separator' as const },
-        ]
-      : []),
-    ...(consoleErrors > 0
-      ? [
-          {
-            label: t('devMenu.consoleErrors', { count: consoleErrors > 99 ? '99+' : consoleErrors }),
-            click: actions.openDevTools,
-          },
           { type: 'separator' as const },
         ]
       : []),

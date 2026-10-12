@@ -267,8 +267,6 @@ export const tr: Record<MessageKey, string> = {
   'findBar.pageTitle': 'Bul',
 
   'format.newTab': 'Yeni sekme',
-  'format.consoleErrors': '{count} konsol hatası',
-  'format.consoleErrors.one': '{count} konsol hatası',
   'format.cacheOff': 'önbellek kapalı',
   'format.offline': 'çevrimdışı',
   'format.networkThrottled': 'ağ kısıtlı',
@@ -1047,8 +1045,6 @@ export const tr: Record<MessageKey, string> = {
   'devCommands.pickElement': 'Ajan için öğe seç',
   'devCommands.pickElementKeywords': 'pick inspect element select agent ai claude codex öğe seç ajan',
 
-  'devMenu.consoleErrors': 'Konsolda {count} hata',
-  'devMenu.consoleErrors.one': 'Konsolda {count} hata',
   'devMenu.disableCache': 'Önbelleği kapat',
   'devMenu.network': 'Ağ',
   'devMenu.noThrottling': 'Kısıtlama yok',

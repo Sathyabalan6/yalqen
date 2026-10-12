@@ -24,7 +24,6 @@ const tab = (id, fields = {}) => ({
   isPrivate: false,
   bookmarked: false,
   blockedPopups: 0,
-  consoleErrors: 0,
   overrides: {},
   translation: { available: false, translated: false, language: null },
   autoReloadSeconds: null,

@@ -197,7 +197,7 @@ const { contextBridge } = require('electron');
 const tab = (index) => ({
   id: 'tab-' + index, title: 'Page ' + index, url: 'https://site' + index + '.example/', faviconUrl: null,
   live: index === 0, frozen: false, loading: index === 2, pinned: index === 1, security: 'secure', isPrivate: false,
-  bookmarked: false, blockedPopups: 0, consoleErrors: 0,
+  bookmarked: false, blockedPopups: 0,
   overrides: { cacheDisabled: false, network: null, colorScheme: null, reducedMotion: false, printMedia: false, userAgent: null, requestRules: false },
   translation: { status: 'idle', available: false }, autoReloadSeconds: null, audible: false, muted: false,
   canGoBack: index === 0, canGoForward: false, agentObserved: index === 0, agentReadAt: null, agentEpisode: null, agentRules: 0,

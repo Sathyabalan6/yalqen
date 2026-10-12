@@ -1555,7 +1555,6 @@ export class YalqenWindow {
         this.popup(
           devMenuTemplate(tab, {
             run: (id) => this.runDevCommand(id),
-            openDevTools: () => tabs.openDevTools(),
             copyEpisode: (id) => clipboard.writeText(t('devMenu.episodePrompt', { id })),
             fixEpisode: () => void this.fixAgentEpisode(tab.id),
             copyPlaywrightTest: (id) => {

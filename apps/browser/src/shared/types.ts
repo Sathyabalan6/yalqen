@@ -39,7 +39,6 @@ export interface TabSnapshot {
   isPrivate: boolean;
   bookmarked: boolean;
   blockedPopups: number;
-  consoleErrors: number;
   overrides: PageOverrides;
   translation: TabTranslation;
   autoReloadSeconds: number | null;

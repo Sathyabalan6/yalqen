@@ -16,7 +16,6 @@ const tab = (id) => ({
   isPrivate: false,
   bookmarked: false,
   blockedPopups: 0,
-  consoleErrors: 0,
   overrides: {
     cacheDisabled: false,
     network: null,

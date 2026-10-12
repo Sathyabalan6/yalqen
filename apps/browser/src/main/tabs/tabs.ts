@@ -94,8 +94,6 @@ import { stepZoom } from './zoom.js';
 import { MAX_CLOSED_TABS } from './closed-tabs.js';
 
 const STORAGE_WORLD_ID = 1001;
-// Past this the badge reads "99+", so further errors need not re-render the chrome.
-const MAX_CONSOLE_ERRORS = 99;
 const MAX_PINCH_ZOOM = 3;
 
 type Listen = WebContents['on'];
@@ -1666,14 +1664,8 @@ export class TabManager {
       this.syncAgentFor(tab, url);
       const hadTranslationState = tab.translation !== 'idle' || tab.pageLanguage !== null;
       this.translation.reset(tab);
-      if (tab.blockedPopups.length === 0 && tab.consoleErrors === 0 && !hadTranslationState) return;
+      if (tab.blockedPopups.length === 0 && !hadTranslationState) return;
       tab.blockedPopups = [];
-      tab.consoleErrors = 0;
-      this.changed();
-    });
-    listen('console-message', ({ level }) => {
-      if (level !== 'error' || tab.consoleErrors > MAX_CONSOLE_ERRORS) return;
-      tab.consoleErrors++;
       this.changed();
     });
   }
@@ -1870,7 +1862,6 @@ export class TabManager {
       bookmarked: this.options.isBookmarked(tab.url),
       security: tab.failed ? 'local' : securityState(tab.url, this.options.hasCertificateException(tab.url)),
       blockedPopups: tab.blockedPopups.length,
-      consoleErrors: tab.consoleErrors,
       overrides: tab.overrides,
       translation: { status: tab.translation, available: this.translation.available(tab) },
       autoReloadSeconds: tab.autoReload?.seconds ?? null,

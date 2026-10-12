@@ -9,7 +9,7 @@
   } from '../../shared/types';
   import { untrack } from 'svelte';
   import { t } from '../../shared/i18n';
-  import { consoleErrorCount, devStates, isNewTab, siteLabel } from './format';
+  import { devStates, isNewTab, siteLabel } from './format';
   import Capsule from './Capsule.svelte';
   import Icon from '../ui/Icon.svelte';
   import NewTabButton from './NewTabButton.svelte';
@@ -381,10 +381,9 @@
                       <Button
                         size="sm"
                         variant="tonal"
-                        icon={activeTab.consoleErrors > 0 ? 'warning' : 'gauge'}
+                        icon="gauge"
                         class={[
                           'dev-state',
-                          activeTab.consoleErrors > 0 && 'has-errors',
                           activeTab.agentObserved && 'agent',
                           activeTab.agentReadAt !== null && Date.now() - activeTab.agentReadAt < 1500 && 'agent-read',
                         ]}
@@ -392,7 +391,7 @@
                         title={states.join(' · ')}
                         onclick={() => send({ type: 'open-dev-menu' })}
                       >
-                        {activeTab.consoleErrors > 0 ? consoleErrorCount(activeTab) : states.length}
+                        {states.length}
                       </Button>
                     {/key}
                   {/if}
@@ -705,10 +704,6 @@
   .tab-group :global(.dev-state) {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
-  }
-
-  .tab-group :global(.dev-state.has-errors) {
-    color: var(--warn);
   }
 
   .tab-group :global(.dev-state.agent) {

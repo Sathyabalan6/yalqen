@@ -81,7 +81,6 @@ ipcRenderer.on('bench:state', (_event, state) => {
       isPrivate: false,
       bookmarked: false,
       blockedPopups: 0,
-      consoleErrors: 0,
       overrides: {
         cacheDisabled: false,
         network: null,
