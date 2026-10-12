@@ -54,7 +54,6 @@ test('appearance choices map to settings', () => {
   assert.deepEqual(appearancePatch({ type: 'appearance', tabs: 'top' }), {
     sidebarVisible: false,
     toolbarVisible: true,
-    toolbarTabs: true,
   });
   assert.equal(invitationTabs({ sidebarVisible: true }), 'left');
   assert.equal(invitationTabs({ sidebarVisible: false }), 'top');

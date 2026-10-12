@@ -28,7 +28,6 @@ interface DownloadManagerOptions {
   developer: Session;
   directory: () => string;
   askBeforeDownload: () => boolean;
-  askDownloadLocation: () => boolean;
   parentOf: (contents: WebContents) => BaseWindow | undefined;
   onStateChange: () => void;
   checkFile?: (file: string) => Promise<string | null>;
@@ -182,7 +181,7 @@ export class DownloadManager {
       );
       item.setSavePath(savePath);
       this.reservedPaths.add(savePath);
-      if (retryPath || (!this.options.askBeforeDownload() && !this.options.askDownloadLocation())) {
+      if (retryPath || !this.options.askBeforeDownload()) {
         this.track(item, savePath, isPrivate);
         return;
       }
@@ -208,7 +207,6 @@ export class DownloadManager {
       const size = item.getTotalBytes() > 0 ? ` · ${formatBytes(item.getTotalBytes())}` : '';
       const parent = contents && this.options.parentOf(contents);
       const detail = t('downloadManager.source', { source: hostOf(item.getURL()) ?? item.getURL(), size });
-      if (this.options.askDownloadLocation()) return this.choosePath(item, savePath, detail, parent);
       const options: MessageBoxOptions = {
         type: 'question',
         message: t('downloadManager.confirm', { name: path.basename(savePath) }),

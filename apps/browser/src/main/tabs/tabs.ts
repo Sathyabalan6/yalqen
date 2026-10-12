@@ -5,7 +5,6 @@ import {
   type Rectangle,
   type Session,
   type WebContents,
-  type WebPreferences,
 } from 'electron';
 import {
   BOOKMARKS_URL,
@@ -129,7 +128,6 @@ interface TabManagerOptions {
   zoomFor: (url: string, isPrivate: boolean) => number;
   defaultZoom: () => number;
   hasOwnZoom: (url: string, isPrivate: boolean) => boolean;
-  pagePreferences: () => Partial<WebPreferences>;
   onZoom: (url: string, factor: number, isPrivate: boolean) => void;
   hasCertificateException: (url: string) => boolean;
   certificateToken: (url: string) => string | null;
@@ -1397,7 +1395,6 @@ export class TabManager {
 
     const view = new WebContentsView({
       webPreferences: {
-        ...this.options.pagePreferences(),
         preload: this.options.pagePreload,
         session: tab.isPrivate ? this.options.privateSession : this.options.session,
         sandbox: true,

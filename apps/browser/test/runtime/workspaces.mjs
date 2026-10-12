@@ -82,7 +82,6 @@ app
         zoomFor: () => 1,
         defaultZoom: () => 1,
         hasOwnZoom: () => false,
-        pagePreferences: () => ({}),
         onZoom: noop,
         hasCertificateException: () => false,
         certificateToken: () => null,

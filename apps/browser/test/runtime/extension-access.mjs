@@ -69,7 +69,6 @@ app
       session: browsing,
       privateSession: session.fromPartition('private-access'),
       closed: [],
-      pagePreferences: () => ({}),
       isBookmarked: () => false,
       hasCertificateException: () => false,
       agentScope: () => false,

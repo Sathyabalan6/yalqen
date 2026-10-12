@@ -48,12 +48,6 @@
     void update({ sidebarVisible: true, panelSide: side, panelCollapsed: width === 'narrow' });
   }
 
-  const fontSizeOptions = [
-    { value: 'small', label: t('settings.fontSmall') },
-    { value: 'medium', label: t('settings.fontMedium') },
-    { value: 'large', label: t('settings.fontLarge') },
-    { value: 'xlarge', label: t('settings.fontXLarge') },
-  ] as const;
   const zoomOptions = DEFAULT_ZOOM_FACTORS.map((factor) => ({
     value: factor,
     label: t('settings.zoomPercent', { percent: Math.round(factor * 100) }),
@@ -62,10 +56,6 @@
     { value: 'always', label: t('settings.pinnedAlways') },
     { value: 'expanded', label: t('settings.pinnedExpanded') },
     { value: 'never', label: t('settings.pinnedNever') },
-  ] as const;
-  const toolbarTabOptions = [
-    { value: true, label: t('settings.allTabs') },
-    { value: false, label: t('settings.currentPageOnly') },
   ] as const;
 </script>
 
@@ -149,34 +139,26 @@
   onchange={setLayout}
   preview={layoutPreview}
 />
-<SettingRow title={t('settings.pinnedTabs')}>
-  <SegmentedControl
-    label={t('settings.pinnedTabs')}
-    options={pinnedOptions}
-    value={values.pinnedDisplay}
-    onchange={(value) => update({ pinnedDisplay: value })}
-  />
-</SettingRow>
-<SettingRow title={t('settings.mediaPlayer')} hint={t('settings.mediaPlayerHint')}>
-  <Switch
-    label={t('settings.mediaPlayer')}
-    checked={values.sidebarWidgets.includes('media')}
-    onchange={(checked) => update({ sidebarWidgets: checked ? ['media'] : [] })}
-  />
-</SettingRow>
 
 <h2>{t('settings.toolbar')}</h2>
 <ToolbarEditor shown={values.toolbarButtons} onchange={(buttons) => update({ toolbarButtons: buttons })} />
-<SettingRow title={t('settings.toolbarTabs')} hint={t('settings.toolbarTabsHint')}>
-  <SegmentedControl
-    label={t('settings.toolbarTabs')}
-    options={toolbarTabOptions}
-    value={values.toolbarTabs}
-    onchange={(value) => update({ toolbarTabs: value })}
-  />
-</SettingRow>
 
 <AdvancedGroup>
+  <SettingRow title={t('settings.pinnedTabs')}>
+    <SegmentedControl
+      label={t('settings.pinnedTabs')}
+      options={pinnedOptions}
+      value={values.pinnedDisplay}
+      onchange={(value) => update({ pinnedDisplay: value })}
+    />
+  </SettingRow>
+  <SettingRow title={t('settings.mediaPlayer')} hint={t('settings.mediaPlayerHint')}>
+    <Switch
+      label={t('settings.mediaPlayer')}
+      checked={values.sidebarWidgets.includes('media')}
+      onchange={(checked) => update({ sidebarWidgets: checked ? ['media'] : [] })}
+    />
+  </SettingRow>
   <SettingRow title={t('settings.transparency')} hint={t('settings.transparencyHint')}>
     <Switch
       label={t('settings.transparency')}
@@ -186,14 +168,6 @@
     {#if transparencyChanged}
       <Button variant="primary" onclick={() => api.relaunch()}>{t('settings.restartNow')}</Button>
     {/if}
-  </SettingRow>
-  <SettingRow title={t('settings.fontSize')} hint={t('settings.fontSizeHint')} labelFor="font-size">
-    <Select
-      id="font-size"
-      options={fontSizeOptions}
-      value={values.fontSize}
-      onchange={(value) => update({ fontSize: value })}
-    />
   </SettingRow>
   <SettingRow title={t('settings.pageZoom')} hint={t('settings.pageZoomHint')} labelFor="default-zoom">
     <Select

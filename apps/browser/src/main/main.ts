@@ -371,7 +371,6 @@ function startBrowser(): void {
     developer,
     directory: () => settings.get().downloadDirectory ?? app.getPath('downloads'),
     askBeforeDownload: () => settings.get().askBeforeDownload,
-    askDownloadLocation: () => settings.get().askDownloadLocation,
     parentOf: (contents) => windowOf(contents)?.window,
     onStateChange: pushState,
     checkFile: (file) => threatLists.checkFile(file),
@@ -536,7 +535,7 @@ function startBrowser(): void {
     if (next.secureDns !== previous.secureDns) app.configureHostResolver(hostResolverOptions(next.secureDns));
     nativeTheme.themeSource = next.theme;
     if (next.accentColor !== previous.accentColor) setPageAccent(accentHex(next.accentColor));
-    if (next.freezeBackgroundTabs !== previous.freezeBackgroundTabs)
+    if (next.discardAfterMinutes > 0 !== previous.discardAfterMinutes > 0)
       eachWindow((window) => window.tabs.applyFreezeSetting());
     if (next.autoUpdate !== previous.autoUpdate) updater.schedule();
     if (next.autoUpdateExtensions !== previous.autoUpdateExtensions && !bench) extensions.scheduleUpdates();

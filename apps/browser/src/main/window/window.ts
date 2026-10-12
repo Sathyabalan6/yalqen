@@ -59,7 +59,6 @@ import type { ActionWindow } from '../agent-bridge/action-runner.js';
 import type { Verification } from '../agent-bridge/verification.js';
 import { formatLocation } from '../agent-bridge/component-source.js';
 import { pageFrame } from './page-layout.js';
-import { fontPreferences } from '../app/page-preferences.js';
 import { permissionOrigin, type PermissionStore } from '../privacy/permissions.js';
 import type { PersistChange, SavedTab, SavedWindow } from '../tabs/persistence.js';
 import { blockedPopupsTemplate } from '../tabs/popups.js';
@@ -106,6 +105,7 @@ import { captureVisualPage } from './visual-capture.js';
 import { ResponsiveScanManager, ResponsiveScanError, createResponsiveScanSession } from './responsive-scan.js';
 import { acquirePageWork, pageWorkBusy } from '../tabs/page-work.js';
 import { readingUrl } from '../../shared/reading-list.js';
+import { startupPages } from '../../shared/startup-pages.js';
 import type { WebAppInfo } from '../../shared/web-apps.js';
 import { accentHex } from '../../shared/accent.js';
 
@@ -355,7 +355,7 @@ export class YalqenWindow {
           }) === 1
         );
       },
-      freezeBackground: () => app.settings.get().freezeBackgroundTabs,
+      freezeBackground: () => app.settings.get().discardAfterMinutes > 0,
       onChange: (persist) => {
         this.syncAgentProjectWithTab();
         if (this.htmlFullScreenTabId && this.htmlFullScreenTabId !== this.tabs.activeTabId) {
@@ -417,7 +417,6 @@ export class YalqenWindow {
       zoomFor: (url, isPrivate) => app.zoomFor(isPrivate).get(url),
       defaultZoom: () => app.settings.get().defaultZoom,
       hasOwnZoom: (url, isPrivate) => app.zoomFor(isPrivate).has(url),
-      pagePreferences: () => fontPreferences(app.settings.get().fontSize),
       onZoom: (url, factor, isPrivate) => app.zoomFor(isPrivate).set(url, factor),
       hasCertificateException: (url) => app.certificates.hasException(url),
       certificateToken: (url) => app.certificates.tokenFor(url),
@@ -613,7 +612,7 @@ export class YalqenWindow {
       sidebarVisible: this.webApp ? false : this.app.settings.get().sidebarVisible,
       media: !this.webApp && this.app.settings.get().sidebarWidgets.includes('media') ? this.tabs.mediaState() : null,
       toolbarVisible: this.webApp ? true : this.app.settings.get().toolbarVisible,
-      toolbarTabs: this.webApp ? false : this.app.settings.get().toolbarTabs,
+      toolbarTabs: this.webApp ? false : !this.app.settings.get().sidebarVisible,
       toolbarButtons: this.webApp ? ['settings', 'downloads'] : this.app.settings.get().toolbarButtons,
       material: this.material(),
       accent: accentHex(this.app.settings.get().accentColor),
@@ -1372,7 +1371,8 @@ export class YalqenWindow {
   }
 
   goHome(): void {
-    this.tabs.navigate(this.app.settings.get().homePageUrl ?? NEW_TAB_URL);
+    const { startupBehavior, startupUrls } = this.app.settings.get();
+    this.tabs.navigate(startupPages(startupBehavior, startupUrls, false)[0] ?? NEW_TAB_URL);
   }
 
   print(contents = this.tabs.activeContents()): void {

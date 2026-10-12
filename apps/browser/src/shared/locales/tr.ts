@@ -190,9 +190,8 @@ export const tr: Record<MessageKey, string> = {
   'toolbar.home': 'Ana sayfa',
   'settings.startupPages': 'Belirli sayfaları aç',
   'settings.startupUrls': 'Açılış sayfaları',
-  'settings.startupUrlsHint': 'Her satıra bir HTTP/HTTPS adresi; en fazla 20 sayfa. Sabitlenmiş sekmeler korunur.',
-  'settings.homePage': 'Ana sayfa',
-  'settings.homePageHint': 'Yeni sekme açmak için boş bırakın. Alt+Home da kullanılabilir.',
+  'settings.startupUrlsHint':
+    'Her satıra bir HTTP/HTTPS adresi; en fazla 20 sayfa. Sabitlenmiş sekmeler korunur. İlk sayfa Ana sayfa düğmesi ve Alt+Home ile de açılır.',
   'settings.pageUrlError': 'Kullanıcı bilgisi içermeyen HTTP/HTTPS adresleri girin (en fazla 20 açılış sayfası).',
 
   'menu.savePage': 'Sayfayı farklı kaydet…',
@@ -241,8 +240,7 @@ export const tr: Record<MessageKey, string> = {
   'threats.update': 'Listeleri güncelle',
   'threats.updating': 'Güncelleniyor…',
   'threats.counts': '{domains} alan adı · {hashes} dosya özeti',
-  'threats.domainUpdated': 'Alan adları güncellendi: {date}',
-  'threats.hashUpdated': 'Dosya özetleri güncellendi: {date}',
+  'threats.updated': 'Son güncelleme: {date}',
   'threats.notLoaded': 'Henüz indirilmedi',
   'threats.updateFailed': 'Güncelleme başarısız. Önceden indirilen listeler etkin kalır.',
   'threats.coverage':
@@ -802,8 +800,6 @@ export const tr: Record<MessageKey, string> = {
   'settings.searchSettings': 'Ayarlarda ara',
   'settings.searchEmpty': 'Aramanızla eşleşen ayar yok.',
   'settings.off': 'Kapalı',
-  'settings.allTabs': 'Tüm sekmeler',
-  'settings.currentPageOnly': 'Yalnızca açık sayfa',
   'settings.bookmarks': 'Yer imleri',
   'settings.history': 'Geçmiş',
   'settings.profile': 'Profil',
@@ -816,10 +812,6 @@ export const tr: Record<MessageKey, string> = {
   'settings.themeDark': 'Koyu',
   'settings.startupRestore': 'Kaldığım yerden devam et',
   'settings.startupNewTab': 'Yeni sekmeyle başla',
-  'settings.fontSmall': 'Küçük',
-  'settings.fontMedium': 'Orta',
-  'settings.fontLarge': 'Büyük',
-  'settings.fontXLarge': 'Çok büyük',
   'settings.dnsAutomatic': 'Otomatik',
   'settings.rangeHour': 'Son 1 saat',
   'settings.rangeDay': 'Son 24 saat',
@@ -865,8 +857,6 @@ export const tr: Record<MessageKey, string> = {
   'settings.autoUpdateHint':
     "Birkaç saatte bir GitHub'dan yeni sürüm olup olmadığına bakılır ve arka planda indirilir. Tarama verisi gönderilmez.",
   'settings.theme': 'Tema',
-  'settings.fontSize': 'Yazı boyutu',
-  'settings.fontSizeHint': 'Sitenin kendi boyutu yoksa kullanılır. Yeni açılan sekmelerde geçerli olur.',
   'settings.pageZoom': 'Sayfa yakınlaştırma',
   'settings.pageZoomHint': 'Kendi yakınlaştırması kaydedilmemiş sayfalara uygulanır.',
   'settings.sidebar': 'Yan menü',
@@ -877,8 +867,6 @@ export const tr: Record<MessageKey, string> = {
   'settings.pinnedExpanded': 'Sadece geniş menüde',
   'settings.pinnedNever': 'Hiçbir zaman',
   'settings.toolbar': 'Üst menü',
-  'settings.toolbarTabs': 'Üst menüdeki sekmeler',
-  'settings.toolbarTabsHint': 'Yalnızca açık sayfanın adresini göstererek üst menüyü sadeleştirir.',
   'settings.toolbarButtons': 'Üst menü düğmeleri',
   'settings.settingsAlwaysVisible': 'Ayarlara erişmek için her zaman görünür kalır.',
   'settings.tabPanel': 'Sekme paneli',
@@ -910,12 +898,11 @@ export const tr: Record<MessageKey, string> = {
   'settings.chooseDownloadDirectory': 'İndirme klasörü seç',
   'settings.changeDownloadDirectory': 'Değiştir…',
   'settings.resetDownloadDirectory': 'Varsayılanı kullan',
-  'settings.askDownloadLocation': 'Her dosyanın nereye kaydedileceğini sor',
-  'settings.askDownloadLocationHint': 'İndirme başlamadan önce dosya adı ve klasör seçin.',
   'settings.usageCounting': 'Aktif kurulumların sayılmasına yardımcı ol',
   'settings.usageCountingHint':
     'Aktif kurulumları saymak için yalqen.com’a günde bir kez yalnızca rastgele bir kurulum kimliği gönderir. Gezinme geçmişi veya hesap bilgisi gönderilmez.',
-  'settings.askBeforeDownloadHint': 'Bir site dosya indirmeye başlamadan önce onayınızı ister.',
+  'settings.askBeforeDownloadHint':
+    'Her dosya inmeden önce sorar. İndirebilir, başka bir ad veya klasöre kaydedebilir ya da iptal edebilirsiniz.',
   'settings.secureDns': 'Güvenli DNS',
   'settings.secureDnsHint':
     'Site adlarını şifreli sorgularla çözer. Otomatik, sistemin DNS sağlayıcısı destekliyorsa kullanır.',
@@ -929,12 +916,9 @@ export const tr: Record<MessageKey, string> = {
   'settings.close': 'Kapat',
   'settings.cleared': 'Temizlendi.',
   'settings.memory': 'Bellek',
-  'settings.freezeBackgroundTabs': 'Arka plan sekmelerini dondur',
-  'settings.freezeBackgroundTabsHint':
-    'Sekme değişince eski sekmedeki kod ve animasyonlar durur. Ses çalan ve sabitlenen sekmeler dondurulmaz.',
-  'settings.discardUnusedTabs': 'Kullanılmayan sekmeleri bellekten çıkar',
+  'settings.discardUnusedTabs': 'Arka plan sekmelerinin belleğini boşalt',
   'settings.discardUnusedTabsHint':
-    'Bu süre boyunca açılmayan sekmeler belleği boşaltır ve tıklayınca yeniden yüklenir. Ses çalan, sabitlenen ve içine yazı yazılan sekmeler korunur.',
+    'Terk ettiğiniz sekmelerde kod ve animasyonlar durur. Bu süre boyunca görüntülemediğiniz sekmeler ayrıca bellekten çıkar ve tıkladığınızda yeniden yüklenir. Ses çalan, sabitlenmiş ve yazılmış metni olan sekmeler korunur. Hiçbir sekmeyi durdurmamak için Kapalı seçin.',
 
   'menu.settings': 'Ayarlar…',
   'menu.about': 'Yalqen Hakkında',

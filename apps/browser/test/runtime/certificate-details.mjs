@@ -69,7 +69,6 @@ app
         privateSession: browsing,
         closed: [],
         privateWindow: !trusted,
-        pagePreferences: () => ({}),
         isBookmarked: () => false,
         hasCertificateException: () => !trusted,
         agentScope: () => false,

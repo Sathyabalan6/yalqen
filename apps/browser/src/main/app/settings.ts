@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type {
   AgentActionPolicy,
-  FontSizeSetting,
   InterfaceLanguage,
   PanelSide,
   PinnedDisplay,
@@ -12,12 +11,11 @@ import type {
   ToolbarButtonId,
 } from '../../shared/types.js';
 import { DEFAULT_ZOOM_FACTORS, REQUIRED_TOOLBAR_BUTTON, TOOLBAR_BUTTON_IDS } from '../../shared/types.js';
-import { webPageUrl, sanitizeStartupUrls } from '../../shared/startup-pages.js';
+import { sanitizeStartupUrls } from '../../shared/startup-pages.js';
 import { sanitizeSidebarWidgets } from '../../shared/sidebar-widgets.js';
 import { DEFAULT_ACCENT, isAccentColor } from '../../shared/accent.js';
 import { JsonFile } from '../storage/json-file.js';
 import { DEFAULT_DISCARD_AFTER_MINUTES, isDiscardAfterMinutes } from '../tabs/memory-saver.js';
-import { FONT_SIZES } from './page-preferences.js';
 import { sanitizeAgentOrigins } from '../agent-bridge/tab-scope.js';
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../address-bar/search.js';
 import { sanitizeProtectionExceptions } from '../privacy/site-protections.js';
@@ -33,7 +31,6 @@ const DEFAULTS: Settings = {
   theme: 'light',
   transparency: true,
   startupBehavior: 'restore',
-  homePageUrl: null,
   startupUrls: [],
   panelCollapsed: false,
   panelSide: 'left',
@@ -41,9 +38,7 @@ const DEFAULTS: Settings = {
   sidebarVisible: true,
   sidebarWidgets: ['media'],
   toolbarVisible: true,
-  toolbarTabs: true,
   toolbarButtons: [...TOOLBAR_BUTTON_IDS],
-  freezeBackgroundTabs: true,
   discardAfterMinutes: DEFAULT_DISCARD_AFTER_MINUTES,
   adBlocking: true,
   threatProtection: true,
@@ -52,7 +47,6 @@ const DEFAULTS: Settings = {
   httpsOnly: false,
   blockThirdPartyCookies: false,
   secureDns: 'automatic',
-  fontSize: 'medium',
   defaultZoom: 1,
   interfaceLanguage: 'system',
   pageTranslation: true,
@@ -60,7 +54,6 @@ const DEFAULTS: Settings = {
   autoUpdateExtensions: true,
   usageCounting: false,
   askBeforeDownload: true,
-  askDownloadLocation: false,
   downloadDirectory: null,
   welcomeCompleted: false,
   invitationSeen: false,
@@ -109,7 +102,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     theme,
     transparency,
     startupBehavior,
-    homePageUrl,
     startupUrls,
     panelCollapsed,
     panelSide,
@@ -117,9 +109,7 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     sidebarVisible,
     sidebarWidgets,
     toolbarVisible,
-    toolbarTabs,
     toolbarButtons,
-    freezeBackgroundTabs,
     discardAfterMinutes,
     adBlocking,
     threatProtection,
@@ -128,7 +118,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     httpsOnly,
     blockThirdPartyCookies,
     secureDns,
-    fontSize,
     defaultZoom,
     interfaceLanguage,
     pageTranslation,
@@ -167,7 +156,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
       typeof startupBehavior === 'string' && STARTUP_BEHAVIORS.has(startupBehavior)
         ? (startupBehavior as Settings['startupBehavior'])
         : base.startupBehavior,
-    homePageUrl: homePageUrl === null || homePageUrl === '' ? null : (webPageUrl(homePageUrl) ?? base.homePageUrl),
     startupUrls: Array.isArray(startupUrls) ? sanitizeStartupUrls(startupUrls) : base.startupUrls,
     panelCollapsed: typeof panelCollapsed === 'boolean' ? panelCollapsed : base.panelCollapsed,
     panelSide: typeof panelSide === 'string' && PANEL_SIDES.has(panelSide) ? (panelSide as PanelSide) : base.panelSide,
@@ -178,9 +166,7 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     sidebarVisible: typeof sidebarVisible === 'boolean' ? sidebarVisible : base.sidebarVisible,
     sidebarWidgets: sanitizeSidebarWidgets(sidebarWidgets, base.sidebarWidgets),
     toolbarVisible: typeof toolbarVisible === 'boolean' ? toolbarVisible : base.toolbarVisible,
-    toolbarTabs: typeof toolbarTabs === 'boolean' ? toolbarTabs : base.toolbarTabs,
     toolbarButtons: sanitizeToolbarButtons(toolbarButtons, base.toolbarButtons),
-    freezeBackgroundTabs: typeof freezeBackgroundTabs === 'boolean' ? freezeBackgroundTabs : base.freezeBackgroundTabs,
     discardAfterMinutes: isDiscardAfterMinutes(discardAfterMinutes) ? discardAfterMinutes : base.discardAfterMinutes,
     adBlocking: typeof adBlocking === 'boolean' ? adBlocking : base.adBlocking,
     threatProtection: typeof threatProtection === 'boolean' ? threatProtection : base.threatProtection,
@@ -195,7 +181,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
       typeof blockThirdPartyCookies === 'boolean' ? blockThirdPartyCookies : base.blockThirdPartyCookies,
     secureDns:
       typeof secureDns === 'string' && SECURE_DNS.has(secureDns) ? (secureDns as SecureDnsSetting) : base.secureDns,
-    fontSize: typeof fontSize === 'string' && fontSize in FONT_SIZES ? (fontSize as FontSizeSetting) : base.fontSize,
     defaultZoom:
       typeof defaultZoom === 'number' && (DEFAULT_ZOOM_FACTORS as readonly number[]).includes(defaultZoom)
         ? defaultZoom
@@ -208,8 +193,10 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     autoUpdate: typeof autoUpdate === 'boolean' ? autoUpdate : base.autoUpdate,
     autoUpdateExtensions: typeof autoUpdateExtensions === 'boolean' ? autoUpdateExtensions : base.autoUpdateExtensions,
     usageCounting: typeof usageCounting === 'boolean' ? usageCounting : base.usageCounting,
-    askBeforeDownload: typeof askBeforeDownload === 'boolean' ? askBeforeDownload : base.askBeforeDownload,
-    askDownloadLocation: typeof askDownloadLocation === 'boolean' ? askDownloadLocation : base.askDownloadLocation,
+    // The removed "ask where to save" option implied a prompt, so it keeps asking.
+    askBeforeDownload:
+      (typeof askBeforeDownload === 'boolean' ? askBeforeDownload : base.askBeforeDownload) ||
+      askDownloadLocation === true,
     downloadDirectory:
       downloadDirectory === null ||
       (typeof downloadDirectory === 'string' && path.isAbsolute(downloadDirectory) && !downloadDirectory.includes('\0'))

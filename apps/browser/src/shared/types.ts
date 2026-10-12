@@ -15,7 +15,6 @@ export type SearchEngineId =
   'google' | 'yandex' | 'duckduckgo' | 'bing' | 'brave' | 'ecosia' | 'startpage' | 'kagi' | 'custom';
 export type ThemeSource = 'system' | 'light' | 'dark';
 export type SecureDnsSetting = 'off' | 'automatic' | 'cloudflare' | 'google' | 'quad9';
-export type FontSizeSetting = 'small' | 'medium' | 'large' | 'xlarge';
 export type PageLanguage = 'tr' | 'en';
 export type InterfaceLanguage = 'system' | 'tr' | 'en';
 export type SecurityState = 'secure' | 'insecure' | 'dangerous' | 'local';
@@ -739,7 +738,6 @@ export interface SettingsValues {
   theme: ThemeSource;
   transparency: boolean;
   startupBehavior: 'restore' | 'new-tab' | 'pages';
-  homePageUrl: string | null;
   startupUrls: string[];
   panelCollapsed: boolean;
   panelSide: PanelSide;
@@ -747,9 +745,7 @@ export interface SettingsValues {
   sidebarVisible: boolean;
   sidebarWidgets: import('./sidebar-widgets').SidebarWidgetId[];
   toolbarVisible: boolean;
-  toolbarTabs: boolean;
   toolbarButtons: ToolbarButtonId[];
-  freezeBackgroundTabs: boolean;
   discardAfterMinutes: number;
   adBlocking: boolean;
   threatProtection: boolean;
@@ -758,7 +754,6 @@ export interface SettingsValues {
   httpsOnly: boolean;
   blockThirdPartyCookies: boolean;
   secureDns: SecureDnsSetting;
-  fontSize: FontSizeSetting;
   defaultZoom: number;
   interfaceLanguage: InterfaceLanguage;
   pageTranslation: boolean;
@@ -766,7 +761,6 @@ export interface SettingsValues {
   autoUpdateExtensions: boolean;
   usageCounting: boolean;
   askBeforeDownload: boolean;
-  askDownloadLocation: boolean;
   downloadDirectory: string | null;
   welcomeCompleted: boolean;
   // The thank-you invitation shown once on first launch, and once to people who installed before it existed.

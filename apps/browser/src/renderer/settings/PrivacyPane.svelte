@@ -18,6 +18,7 @@
   } = $props();
 
   const api = window.yalqenSettings;
+  const lastUpdated = $derived(Math.max(threatLists?.domainUpdatedAt ?? 0, threatLists?.hashUpdatedAt ?? 0));
   const dnsOptions = [
     { value: 'automatic', label: t('settings.dnsAutomatic') },
     { value: 'cloudflare', label: 'Cloudflare' },
@@ -93,6 +94,14 @@
   />
 </SettingRow>
 
+<SettingRow title={t('settings.usageCounting')} hint={t('settings.usageCountingHint')}>
+  <Switch
+    label={t('settings.usageCounting')}
+    checked={values.usageCounting}
+    onchange={(checked) => update({ usageCounting: checked })}
+  />
+</SettingRow>
+
 <h2>{t('settings.browsingData')}</h2>
 <SettingRow title={t('settings.clearBrowsingData')} hint={t('settings.clearBrowsingDataRowHint')}>
   <Button variant="tonal" onclick={openClear}>{t('settings.clearDataEllipsis')}</Button>
@@ -154,13 +163,8 @@
       >
     </SettingRow>
     <p class="hint sources" aria-live="polite">
-      {t('threats.domainUpdated', {
-        date: threatLists.domainUpdatedAt
-          ? new Date(threatLists.domainUpdatedAt).toLocaleString()
-          : t('threats.notLoaded'),
-      })}<br />
-      {t('threats.hashUpdated', {
-        date: threatLists.hashUpdatedAt ? new Date(threatLists.hashUpdatedAt).toLocaleString() : t('threats.notLoaded'),
+      {t('threats.updated', {
+        date: lastUpdated ? new Date(lastUpdated).toLocaleString() : t('threats.notLoaded'),
       })}
       {#if threatLists.failed}<br /><span class="error">{t('threats.updateFailed')}</span>{/if}
       <br />{t('threats.coverage')}

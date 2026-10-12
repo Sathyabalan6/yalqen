@@ -6,7 +6,7 @@ import downloadManager from '../../../dist/main/library/download-manager.js';
 const { DownloadManager } = downloadManager;
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
-function fixture(t, { askBefore = true, askLocation = false, responses = [], paths = [], checkFile } = {}) {
+function fixture(t, { askBefore = true, responses = [], paths = [], checkFile } = {}) {
   const session = new EventEmitter();
   session.downloadURL = (url) => {
     session.retried = url;
@@ -39,7 +39,6 @@ function fixture(t, { askBefore = true, askLocation = false, responses = [], pat
       developer: new EventEmitter(),
       directory: () => '/downloads',
       askBeforeDownload: () => askBefore,
-      askDownloadLocation: () => askLocation,
       parentOf: () => undefined,
       onStateChange: () => {},
       checkFile,
@@ -99,15 +98,6 @@ test('save as changes both the file name and folder before resuming', async (t) 
   assert.match(f.saves[0].message, /example.com/);
 });
 
-test('ask where to save opens the chooser even without the separate download confirmation', async (t) => {
-  const f = fixture(t, { askBefore: false, askLocation: true, paths: ['/chosen/report.pdf'] });
-  const item = f.start();
-  await tick();
-  assert.equal(item.savePath, '/chosen/report.pdf');
-  assert.deepEqual(f.prompts, []);
-  assert.equal(f.saves.length, 1);
-});
-
 test('cancelling either dialog cancels the download and releases its reserved name', async (t) => {
   for (const responses of [[2], [1]]) {
     const f = fixture(t, { responses });
@@ -123,8 +113,7 @@ test('cancelling either dialog cancels the download and releases its reserved na
 
 test('a save chooser cannot overwrite a file reserved by an active download', async (t) => {
   const f = fixture(t, {
-    askLocation: true,
-    responses: [0],
+    responses: [1, 1, 0],
     paths: ['/chosen/report.pdf', '/chosen/report.pdf', '/chosen/other.pdf'],
   });
   const first = f.start();
@@ -133,12 +122,12 @@ test('a save chooser cannot overwrite a file reserved by an active download', as
   await tick();
   assert.equal(first.savePath, '/chosen/report.pdf');
   assert.equal(second.savePath, '/chosen/other.pdf');
-  assert.equal(f.prompts.length, 1);
+  assert.equal(f.prompts.length, 3);
   assert.equal(f.entries.size, 2);
 });
 
 test('retry retains the selected folder and name without requesting approval again', async (t) => {
-  const f = fixture(t, { askLocation: true, paths: ['/chosen/custom.pdf'] });
+  const f = fixture(t, { responses: [1], paths: ['/chosen/custom.pdf'] });
   const first = f.start();
   await tick();
   first.state = 'interrupted';

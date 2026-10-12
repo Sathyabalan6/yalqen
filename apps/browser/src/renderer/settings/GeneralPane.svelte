@@ -37,9 +37,7 @@
   let templateDraft = $state('');
   let editingTemplate = $state(false);
   let choosingDirectory = $state(false);
-  let homeDraft = $state('');
   let pagesDraft = $state('');
-  let editingHome = $state(false);
   let editingPages = $state(false);
   const pageLines = $derived(
     pagesDraft
@@ -47,7 +45,6 @@
       .map((url) => url.trim())
       .filter(Boolean),
   );
-  const homeInvalid = $derived(!!homeDraft.trim() && !webPageUrl(homeDraft));
   const pagesInvalid = $derived(pageLines.length > 20 || pageLines.some((url) => !webPageUrl(url)));
 
   const values = $derived(view.values);
@@ -63,15 +60,9 @@
     if (!editingTemplate) templateDraft = values.customSearchTemplate ?? '';
   });
   $effect(() => {
-    if (!editingHome) homeDraft = values.homePageUrl ?? '';
     if (!editingPages) pagesDraft = values.startupUrls.join('\n');
   });
 
-  function saveHome(): void {
-    if (homeInvalid) return;
-    editingHome = false;
-    void update({ homePageUrl: webPageUrl(homeDraft) });
-  }
   function savePages(): void {
     if (pagesInvalid) return;
     editingPages = false;
@@ -179,22 +170,6 @@
   </SettingRow>
 {/if}
 
-<SettingRow title={t('settings.homePage')} hint={t('settings.homePageHint')} labelFor="home-page" stacked>
-  <TextField
-    id="home-page"
-    type="url"
-    maxlength={8192}
-    bind:value={homeDraft}
-    invalid={homeInvalid}
-    onfocus={() => (editingHome = true)}
-    onchange={saveHome}
-    spellcheck="false"
-    autocomplete="off"
-    placeholder="https://example.com/"
-  />
-  {#if homeInvalid}<span class="error" role="alert">{t('settings.pageUrlError')}</span>{/if}
-</SettingRow>
-
 <h2>{t('settings.downloads')}</h2>
 <SettingRow title={t('settings.downloadDirectory')} hint={view.downloadDirectory}>
   <Button variant="tonal" disabled={choosingDirectory} onclick={chooseDownloadDirectory}>
@@ -211,13 +186,6 @@
     label={t('settings.askBeforeDownload')}
     checked={values.askBeforeDownload}
     onchange={(checked) => update({ askBeforeDownload: checked })}
-  />
-</SettingRow>
-<SettingRow title={t('settings.askDownloadLocation')} hint={t('settings.askDownloadLocationHint')}>
-  <Switch
-    label={t('settings.askDownloadLocation')}
-    checked={values.askDownloadLocation}
-    onchange={(checked) => update({ askDownloadLocation: checked })}
   />
 </SettingRow>
 
@@ -273,14 +241,6 @@
     label={t('settings.autoUpdate')}
     checked={values.autoUpdate}
     onchange={(checked) => update({ autoUpdate: checked })}
-  />
-</SettingRow>
-
-<SettingRow title={t('settings.usageCounting')} hint={t('settings.usageCountingHint')}>
-  <Switch
-    label={t('settings.usageCounting')}
-    checked={values.usageCounting}
-    onchange={(checked) => update({ usageCounting: checked })}
   />
 </SettingRow>
 

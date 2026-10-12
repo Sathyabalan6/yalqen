@@ -39,6 +39,6 @@ export function appearancePatch(action: Extract<WelcomeAction, { type: 'appearan
   if (action.accent !== undefined) patch.accentColor = action.accent;
   if (action.theme !== undefined) patch.theme = action.theme;
   if (action.tabs === 'left') Object.assign(patch, { sidebarVisible: true, panelSide: 'left' });
-  if (action.tabs === 'top') Object.assign(patch, { sidebarVisible: false, toolbarVisible: true, toolbarTabs: true });
+  if (action.tabs === 'top') Object.assign(patch, { sidebarVisible: false, toolbarVisible: true });
   return patch;
 }
