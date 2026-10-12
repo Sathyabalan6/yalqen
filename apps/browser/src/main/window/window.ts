@@ -70,13 +70,7 @@ import { printPage, savePdfFile, saveScreenshotFile } from './page-capture.js';
 import { showCertificateDetails } from '../privacy/certificate-details.js';
 import { saveOfflinePage, openLocalFiles } from './page-files.js';
 import { loadWallpaper } from './wallpaper.js';
-import {
-  libraryMenuTemplate,
-  profileMenuTemplate,
-  siteInfoMenu,
-  tabMenuTemplate,
-  technologiesMenu,
-} from './window-menus.js';
+import { libraryMenuTemplate, profileMenuTemplate, siteInfoMenu, tabMenuTemplate } from './window-menus.js';
 import { buildSearchUrl, type SearchEngine } from '../address-bar/search.js';
 import type { SettingsStore } from '../app/settings.js';
 import type { SiteProtections } from '../privacy/site-protections.js';
@@ -1658,9 +1652,6 @@ export class YalqenWindow {
       case 'open-extensions-menu':
         this.openExtensionsMenu(sanitizeAnchor(action.anchor));
         break;
-      case 'open-technologies-menu':
-        void this.openTechnologiesMenu(sanitizeAnchor(action.anchor));
-        break;
       case 'open-extension-store':
         tabs.open(STORE_HOME, { isPrivate: false });
         break;
@@ -1697,16 +1688,6 @@ export class YalqenWindow {
       clearSiteData: () => this.runDevCommand('clear-site-data'),
     });
     if (template && !this.window.isDestroyed()) this.popup(template);
-  }
-
-  private async openTechnologiesMenu(anchor: AnchorRect): Promise<void> {
-    const template = await technologiesMenu({ tabs: this.tabs, session: (isPrivate) => this.sessionFor(isPrivate) });
-    if (!template || this.window.isDestroyed()) return;
-    Menu.buildFromTemplate(template).popup({
-      window: this.window,
-      x: Math.round(anchor.x),
-      y: Math.round(anchor.y + anchor.height + 4),
-    });
   }
 
   private openExtensionsMenu(anchor: AnchorRect): void {

@@ -48,17 +48,7 @@ test('unknown or mistyped fields fall back', () => {
       sidebarVisible: true,
       sidebarWidgets: ['media'],
       toolbarVisible: true,
-      toolbarButtons: [
-        'home',
-        'bookmarks',
-        'history',
-        'extensions',
-        'profile',
-        'settings',
-        'technologies',
-        'screenshot',
-        'downloads',
-      ],
+      toolbarButtons: ['home', 'bookmarks', 'history', 'extensions', 'profile', 'settings', 'screenshot', 'downloads'],
       discardAfterMinutes: 30,
       adBlocking: true,
       threatProtection: true,
@@ -94,13 +84,12 @@ test('unknown or mistyped fields fall back', () => {
 });
 
 test('toolbar buttons are deduplicated, filtered and always keep settings', () => {
-  assert.deepEqual(sanitizeSettings({ toolbarButtons: ['history', 'bogus', 'history', 'downloads'] }).toolbarButtons, [
-    'history',
-    'downloads',
-    'settings',
-  ]);
+  assert.deepEqual(
+    sanitizeSettings({ toolbarButtons: ['history', 'bogus', 'technologies', 'history', 'downloads'] }).toolbarButtons,
+    ['history', 'downloads', 'settings'],
+  );
   assert.deepEqual(sanitizeSettings({ toolbarButtons: [] }).toolbarButtons, ['settings']);
-  assert.equal(sanitizeSettings({ toolbarButtons: 'nope' }).toolbarButtons.length, 9);
+  assert.equal(sanitizeSettings({ toolbarButtons: 'nope' }).toolbarButtons.length, 8);
 });
 
 test('the sidebar media player is on by default and stays off once turned off', () => {

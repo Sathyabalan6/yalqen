@@ -21,7 +21,6 @@ interface SiteInfo {
   security: SecurityState;
   permissions: { kind: SitePermission; decision: Decision }[];
   data?: SiteData;
-  technologies?: string[];
   protections?: {
     adBlocking: boolean;
     blockThirdPartyCookies: boolean;
@@ -92,14 +91,5 @@ export function siteInfoTemplate(info: SiteInfo, actions: SiteInfoActions): Menu
       })),
     })),
     ...(info.data ? siteDataItems(info.data, actions) : []),
-    ...(info.technologies?.length
-      ? [
-          { type: 'separator' as const },
-          {
-            label: t('siteInfo.technologies', { count: info.technologies.length }),
-            submenu: info.technologies.map((name) => ({ label: name, enabled: false })),
-          },
-        ]
-      : []),
   ];
 }

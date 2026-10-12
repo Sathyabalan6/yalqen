@@ -81,11 +81,9 @@
       (activeTab?.blockedPopups ?? 0) > 0,
   );
 
-  function openAnchoredMenu(type: 'open-extensions-menu' | 'open-technologies-menu') {
-    return (event: MouseEvent & { currentTarget: HTMLElement }): void => {
-      const { x, y, width, height } = event.currentTarget.getBoundingClientRect();
-      send({ type, anchor: { x, y, width, height } });
-    };
+  function openExtensionsMenu(event: MouseEvent & { currentTarget: HTMLElement }): void {
+    const { x, y, width, height } = event.currentTarget.getBoundingClientRect();
+    send({ type: 'open-extensions-menu', anchor: { x, y, width, height } });
   }
 
   $effect(() => {
@@ -174,11 +172,7 @@
     />
   {:else if id === 'extensions'}
     {#if extensions}
-      <IconButton
-        icon="extensions"
-        label={t('toolbar.extensions')}
-        onclick={openAnchoredMenu('open-extensions-menu')}
-      />
+      <IconButton icon="extensions" label={t('toolbar.extensions')} onclick={openExtensionsMenu} />
     {/if}
   {:else if id === 'profile'}
     <IconButton icon="profile" label={t('toolbar.profile')} onclick={() => send({ type: 'open-profile-menu' })} />
@@ -188,13 +182,6 @@
       label={t('toolbar.settings')}
       title={t('toolbar.settingsTitle')}
       onclick={() => send({ type: 'open-settings' })}
-    />
-  {:else if id === 'technologies'}
-    <IconButton
-      icon="technologies"
-      label={t('toolbar.technologies')}
-      disabled={!ready || !activeTab?.url.startsWith('http')}
-      onclick={openAnchoredMenu('open-technologies-menu')}
     />
   {:else if id === 'screenshot'}
     <IconButton

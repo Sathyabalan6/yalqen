@@ -701,8 +701,6 @@ export const en = {
   'toolbar.extensions': 'Extensions',
   'toolbar.profile': 'Profile',
   'toolbar.settings': 'Settings',
-  'toolbar.technologies': 'Technologies',
-  'siteInfo.noTechnologies': 'No technologies detected',
   'toolbar.settingsTitle': 'Settings (⌘,)',
   'toolbar.downloadsActive': 'Downloads, {count} in progress',
   'toolbar.downloads': 'Downloads',
@@ -1440,7 +1438,6 @@ export const en = {
   'agentActions.requestFailed': 'failed',
   'siteInfo.blockAds': 'Block ads on this site',
   'siteInfo.blockThirdPartyCookies': 'Block third-party cookies on this site',
-  'siteInfo.technologies': 'Technologies ({count})',
   'extensions.updatePackageMismatch': 'The update package could not be verified. The previous version was kept.',
   'extensions.updateNeedsPermission':
     'This update needs approval for new permissions. Click Check for updates to review.',
