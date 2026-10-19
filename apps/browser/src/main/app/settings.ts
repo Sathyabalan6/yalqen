@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type {
   AgentActionPolicy,
-  FontSizeSetting,
   InterfaceLanguage,
   PanelSide,
   PinnedDisplay,
@@ -11,11 +10,17 @@ import type {
   ThemeSource,
   ToolbarButtonId,
 } from '../../shared/types.js';
-import { DEFAULT_ZOOM_FACTORS, REQUIRED_TOOLBAR_BUTTON, TOOLBAR_BUTTON_IDS } from '../../shared/types.js';
-import { webPageUrl, sanitizeStartupUrls } from '../../shared/startup-pages.js';
+import {
+  DEFAULT_GLASS_TINT,
+  DEFAULT_ZOOM_FACTORS,
+  REQUIRED_TOOLBAR_BUTTON,
+  TOOLBAR_BUTTON_IDS,
+} from '../../shared/types.js';
+import { sanitizeStartupUrls } from '../../shared/startup-pages.js';
+import { sanitizeSidebarWidgets } from '../../shared/sidebar-widgets.js';
+import { DEFAULT_ACCENT, isAccentColor } from '../../shared/accent.js';
 import { JsonFile } from '../storage/json-file.js';
 import { DEFAULT_DISCARD_AFTER_MINUTES, isDiscardAfterMinutes } from '../tabs/memory-saver.js';
-import { FONT_SIZES } from './page-preferences.js';
 import { sanitizeAgentOrigins } from '../agent-bridge/tab-scope.js';
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '../address-bar/search.js';
 import { sanitizeProtectionExceptions } from '../privacy/site-protections.js';
@@ -29,17 +34,17 @@ const DEFAULTS: Settings = {
   searchEngine: DEFAULT_SEARCH_ENGINE,
   customSearchTemplate: null,
   theme: 'light',
+  transparency: true,
+  glassTint: DEFAULT_GLASS_TINT,
   startupBehavior: 'restore',
-  homePageUrl: null,
   startupUrls: [],
   panelCollapsed: false,
   panelSide: 'left',
   pinnedDisplay: 'always',
   sidebarVisible: true,
+  sidebarWidgets: ['media'],
   toolbarVisible: true,
-  toolbarTabs: true,
   toolbarButtons: [...TOOLBAR_BUTTON_IDS],
-  freezeBackgroundTabs: true,
   discardAfterMinutes: DEFAULT_DISCARD_AFTER_MINUTES,
   adBlocking: true,
   threatProtection: true,
@@ -48,7 +53,6 @@ const DEFAULTS: Settings = {
   httpsOnly: false,
   blockThirdPartyCookies: false,
   secureDns: 'automatic',
-  fontSize: 'medium',
   defaultZoom: 1,
   interfaceLanguage: 'system',
   pageTranslation: true,
@@ -56,9 +60,13 @@ const DEFAULTS: Settings = {
   autoUpdateExtensions: true,
   usageCounting: false,
   askBeforeDownload: true,
-  askDownloadLocation: false,
   downloadDirectory: null,
   welcomeCompleted: false,
+  invitationSeen: false,
+  letterSeen: false,
+  letterCounted: false,
+  displayName: '',
+  accentColor: DEFAULT_ACCENT,
   dismissedAnnouncement: '',
   dismissedFeedback: '',
   dismissedUpdate: '',
@@ -85,23 +93,32 @@ function sanitizeToolbarButtons(value: unknown, fallback: ToolbarButtonId[]): To
   return buttons.includes(REQUIRED_TOOLBAR_BUTTON) ? buttons : [...buttons, REQUIRED_TOOLBAR_BUTTON];
 }
 
+const MAX_DISPLAY_NAME = 40;
+
+function sanitizeDisplayName(value: string): string {
+  const name = [...value.replace(/\s+/g, ' ').trim()].filter(
+    (char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127,
+  );
+  return name.slice(0, MAX_DISPLAY_NAME).join('').trim();
+}
+
 export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Settings {
   const input = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>;
   const {
     searchEngine,
     customSearchTemplate,
     theme,
+    transparency,
+    glassTint,
     startupBehavior,
-    homePageUrl,
     startupUrls,
     panelCollapsed,
     panelSide,
     pinnedDisplay,
     sidebarVisible,
+    sidebarWidgets,
     toolbarVisible,
-    toolbarTabs,
     toolbarButtons,
-    freezeBackgroundTabs,
     discardAfterMinutes,
     adBlocking,
     threatProtection,
@@ -110,7 +127,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     httpsOnly,
     blockThirdPartyCookies,
     secureDns,
-    fontSize,
     defaultZoom,
     interfaceLanguage,
     pageTranslation,
@@ -121,6 +137,11 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     askDownloadLocation,
     downloadDirectory,
     welcomeCompleted,
+    invitationSeen,
+    letterSeen,
+    letterCounted,
+    displayName,
+    accentColor,
     dismissedAnnouncement,
     dismissedFeedback,
     dismissedUpdate,
@@ -141,11 +162,15 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
         ? customSearchTemplate?.trim() || null
         : base.customSearchTemplate,
     theme: typeof theme === 'string' && THEMES.has(theme) ? (theme as ThemeSource) : base.theme,
+    transparency: typeof transparency === 'boolean' ? transparency : base.transparency,
+    glassTint:
+      typeof glassTint === 'number' && Number.isFinite(glassTint)
+        ? Math.round(Math.min(100, Math.max(0, glassTint)))
+        : base.glassTint,
     startupBehavior:
       typeof startupBehavior === 'string' && STARTUP_BEHAVIORS.has(startupBehavior)
         ? (startupBehavior as Settings['startupBehavior'])
         : base.startupBehavior,
-    homePageUrl: homePageUrl === null || homePageUrl === '' ? null : (webPageUrl(homePageUrl) ?? base.homePageUrl),
     startupUrls: Array.isArray(startupUrls) ? sanitizeStartupUrls(startupUrls) : base.startupUrls,
     panelCollapsed: typeof panelCollapsed === 'boolean' ? panelCollapsed : base.panelCollapsed,
     panelSide: typeof panelSide === 'string' && PANEL_SIDES.has(panelSide) ? (panelSide as PanelSide) : base.panelSide,
@@ -154,10 +179,9 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
         ? (pinnedDisplay as PinnedDisplay)
         : base.pinnedDisplay,
     sidebarVisible: typeof sidebarVisible === 'boolean' ? sidebarVisible : base.sidebarVisible,
+    sidebarWidgets: sanitizeSidebarWidgets(sidebarWidgets, base.sidebarWidgets),
     toolbarVisible: typeof toolbarVisible === 'boolean' ? toolbarVisible : base.toolbarVisible,
-    toolbarTabs: typeof toolbarTabs === 'boolean' ? toolbarTabs : base.toolbarTabs,
     toolbarButtons: sanitizeToolbarButtons(toolbarButtons, base.toolbarButtons),
-    freezeBackgroundTabs: typeof freezeBackgroundTabs === 'boolean' ? freezeBackgroundTabs : base.freezeBackgroundTabs,
     discardAfterMinutes: isDiscardAfterMinutes(discardAfterMinutes) ? discardAfterMinutes : base.discardAfterMinutes,
     adBlocking: typeof adBlocking === 'boolean' ? adBlocking : base.adBlocking,
     threatProtection: typeof threatProtection === 'boolean' ? threatProtection : base.threatProtection,
@@ -172,7 +196,6 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
       typeof blockThirdPartyCookies === 'boolean' ? blockThirdPartyCookies : base.blockThirdPartyCookies,
     secureDns:
       typeof secureDns === 'string' && SECURE_DNS.has(secureDns) ? (secureDns as SecureDnsSetting) : base.secureDns,
-    fontSize: typeof fontSize === 'string' && fontSize in FONT_SIZES ? (fontSize as FontSizeSetting) : base.fontSize,
     defaultZoom:
       typeof defaultZoom === 'number' && (DEFAULT_ZOOM_FACTORS as readonly number[]).includes(defaultZoom)
         ? defaultZoom
@@ -185,14 +208,21 @@ export function sanitizeSettings(data: unknown, base: Settings = DEFAULTS): Sett
     autoUpdate: typeof autoUpdate === 'boolean' ? autoUpdate : base.autoUpdate,
     autoUpdateExtensions: typeof autoUpdateExtensions === 'boolean' ? autoUpdateExtensions : base.autoUpdateExtensions,
     usageCounting: typeof usageCounting === 'boolean' ? usageCounting : base.usageCounting,
-    askBeforeDownload: typeof askBeforeDownload === 'boolean' ? askBeforeDownload : base.askBeforeDownload,
-    askDownloadLocation: typeof askDownloadLocation === 'boolean' ? askDownloadLocation : base.askDownloadLocation,
+    // The removed "ask where to save" option implied a prompt, so it keeps asking.
+    askBeforeDownload:
+      (typeof askBeforeDownload === 'boolean' ? askBeforeDownload : base.askBeforeDownload) ||
+      askDownloadLocation === true,
     downloadDirectory:
       downloadDirectory === null ||
       (typeof downloadDirectory === 'string' && path.isAbsolute(downloadDirectory) && !downloadDirectory.includes('\0'))
         ? downloadDirectory
         : base.downloadDirectory,
     welcomeCompleted: typeof welcomeCompleted === 'boolean' ? welcomeCompleted : base.welcomeCompleted,
+    invitationSeen: typeof invitationSeen === 'boolean' ? invitationSeen : base.invitationSeen,
+    letterSeen: typeof letterSeen === 'boolean' ? letterSeen : base.letterSeen,
+    letterCounted: typeof letterCounted === 'boolean' ? letterCounted : base.letterCounted,
+    displayName: typeof displayName === 'string' ? sanitizeDisplayName(displayName) : base.displayName,
+    accentColor: isAccentColor(accentColor) ? accentColor : base.accentColor,
     dismissedAnnouncement:
       typeof dismissedAnnouncement === 'string' ? dismissedAnnouncement.slice(0, 64) : base.dismissedAnnouncement,
     dismissedFeedback: typeof dismissedFeedback === 'string' ? dismissedFeedback.slice(0, 64) : base.dismissedFeedback,

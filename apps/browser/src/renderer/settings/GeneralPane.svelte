@@ -37,9 +37,7 @@
   let templateDraft = $state('');
   let editingTemplate = $state(false);
   let choosingDirectory = $state(false);
-  let homeDraft = $state('');
   let pagesDraft = $state('');
-  let editingHome = $state(false);
   let editingPages = $state(false);
   const pageLines = $derived(
     pagesDraft
@@ -47,7 +45,6 @@
       .map((url) => url.trim())
       .filter(Boolean),
   );
-  const homeInvalid = $derived(!!homeDraft.trim() && !webPageUrl(homeDraft));
   const pagesInvalid = $derived(pageLines.length > 20 || pageLines.some((url) => !webPageUrl(url)));
 
   const values = $derived(view.values);
@@ -63,15 +60,9 @@
     if (!editingTemplate) templateDraft = values.customSearchTemplate ?? '';
   });
   $effect(() => {
-    if (!editingHome) homeDraft = values.homePageUrl ?? '';
     if (!editingPages) pagesDraft = values.startupUrls.join('\n');
   });
 
-  function saveHome(): void {
-    if (homeInvalid) return;
-    editingHome = false;
-    void update({ homePageUrl: webPageUrl(homeDraft) });
-  }
   function savePages(): void {
     if (pagesInvalid) return;
     editingPages = false;
@@ -112,7 +103,16 @@
   }
 </script>
 
-<Profiles />
+{#if !view.defaultBrowser}
+  <div class="banner" role="note">
+    <span class="label">
+      <span>{t('settings.defaultBrowserNo')}</span>
+      <span class="hint">{t('settings.defaultBrowserHint')}</span>
+    </span>
+    <Button variant="primary" onclick={makeDefault}>{t('settings.makeDefault')}</Button>
+  </div>
+{/if}
+
 <h2>{t('settings.search')}</h2>
 <SettingRow title={t('settings.searchEngine')} hint={t('settings.searchEngineHint')} labelFor="engine">
   <Select
@@ -142,16 +142,6 @@
   </SettingRow>
 {/if}
 
-<h2>{t('settings.defaultBrowser')}</h2>
-<SettingRow
-  title={view.defaultBrowser ? t('settings.defaultBrowserYes') : t('settings.defaultBrowserNo')}
-  hint={t('settings.defaultBrowserHint')}
->
-  {#if !view.defaultBrowser}
-    <Button variant="primary" onclick={makeDefault}>{t('settings.makeDefault')}</Button>
-  {/if}
-</SettingRow>
-
 <h2>{t('settings.startup')}</h2>
 <SettingRow title={t('settings.whenBrowserOpens')} hint={t('settings.startupHint')}>
   <Select
@@ -180,34 +170,6 @@
   </SettingRow>
 {/if}
 
-<SettingRow title={t('settings.homePage')} hint={t('settings.homePageHint')} labelFor="home-page" stacked>
-  <TextField
-    id="home-page"
-    type="url"
-    maxlength={8192}
-    bind:value={homeDraft}
-    invalid={homeInvalid}
-    onfocus={() => (editingHome = true)}
-    onchange={saveHome}
-    spellcheck="false"
-    autocomplete="off"
-    placeholder="https://example.com/"
-  />
-  {#if homeInvalid}<span class="error" role="alert">{t('settings.pageUrlError')}</span>{/if}
-</SettingRow>
-<SettingRow title={t('settings.showHomeButton')}>
-  <Switch
-    label={t('settings.showHomeButton')}
-    checked={values.toolbarButtons.includes('home')}
-    onchange={(shown) =>
-      update({
-        toolbarButtons: shown
-          ? ['home', ...values.toolbarButtons.filter((id) => id !== 'home')]
-          : values.toolbarButtons.filter((id) => id !== 'home'),
-      })}
-  />
-</SettingRow>
-
 <h2>{t('settings.downloads')}</h2>
 <SettingRow title={t('settings.downloadDirectory')} hint={view.downloadDirectory}>
   <Button variant="tonal" disabled={choosingDirectory} onclick={chooseDownloadDirectory}>
@@ -219,11 +181,11 @@
     >
   {/if}
 </SettingRow>
-<SettingRow title={t('settings.askDownloadLocation')} hint={t('settings.askDownloadLocationHint')}>
+<SettingRow title={t('settings.askBeforeDownload')} hint={t('settings.askBeforeDownloadHint')}>
   <Switch
-    label={t('settings.askDownloadLocation')}
-    checked={values.askDownloadLocation}
-    onchange={(checked) => update({ askDownloadLocation: checked })}
+    label={t('settings.askBeforeDownload')}
+    checked={values.askBeforeDownload}
+    onchange={(checked) => update({ askBeforeDownload: checked })}
   />
 </SettingRow>
 
@@ -242,6 +204,13 @@
   {#if languageChanged}
     <Button variant="primary" onclick={() => api.relaunch()}>{t('settings.restartNow')}</Button>
   {/if}
+</SettingRow>
+<SettingRow title={t('settings.pageTranslation')} hint={t('settings.pageTranslationHint')}>
+  <Switch
+    label={t('settings.pageTranslation')}
+    checked={values.pageTranslation}
+    onchange={(checked) => update({ pageTranslation: checked })}
+  />
 </SettingRow>
 
 <h2>{t('settings.updates')}</h2>
@@ -275,7 +244,21 @@
   />
 </SettingRow>
 
+<Profiles />
+
 <style>
+  .banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin: 6px 0 4px;
+    padding: 14px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
   #startup-urls {
     width: 100%;
     min-height: 88px;

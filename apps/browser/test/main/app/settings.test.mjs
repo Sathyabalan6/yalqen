@@ -17,16 +17,14 @@ test('unknown or mistyped fields fall back', () => {
       panelSide: 'top',
       pinnedDisplay: 'sometimes',
       sidebarVisible: 'no',
+      sidebarWidgets: 'media',
       toolbarVisible: 0,
-      toolbarTabs: 'no',
-      freezeBackgroundTabs: 1,
       discardAfterMinutes: 45,
       adBlocking: 'no',
       threatProtection: 'yes',
       httpsOnly: 'yes',
       blockThirdPartyCookies: 1,
       secureDns: 'opendns',
-      fontSize: 'huge',
       defaultZoom: 1.3,
       autoUpdate: 'no',
       usageCounting: 'yes',
@@ -41,17 +39,17 @@ test('unknown or mistyped fields fall back', () => {
       searchEngine: 'google',
       customSearchTemplate: null,
       theme: 'light',
+      transparency: true,
+      glassTint: 25,
       startupBehavior: 'restore',
-      homePageUrl: null,
       startupUrls: [],
       panelCollapsed: false,
       panelSide: 'left',
       pinnedDisplay: 'always',
       sidebarVisible: true,
+      sidebarWidgets: ['media'],
       toolbarVisible: true,
-      toolbarTabs: true,
       toolbarButtons: ['home', 'bookmarks', 'history', 'extensions', 'profile', 'settings', 'screenshot', 'downloads'],
-      freezeBackgroundTabs: true,
       discardAfterMinutes: 30,
       adBlocking: true,
       threatProtection: true,
@@ -60,7 +58,6 @@ test('unknown or mistyped fields fall back', () => {
       httpsOnly: false,
       blockThirdPartyCookies: false,
       secureDns: 'automatic',
-      fontSize: 'medium',
       defaultZoom: 1,
       interfaceLanguage: 'system',
       pageTranslation: true,
@@ -68,9 +65,13 @@ test('unknown or mistyped fields fall back', () => {
       autoUpdateExtensions: true,
       usageCounting: false,
       askBeforeDownload: true,
-      askDownloadLocation: false,
       downloadDirectory: null,
       welcomeCompleted: false,
+      invitationSeen: false,
+      letterSeen: false,
+      letterCounted: false,
+      displayName: '',
+      accentColor: 'orange',
       dismissedAnnouncement: '',
       dismissedFeedback: '',
       dismissedUpdate: '',
@@ -86,13 +87,23 @@ test('unknown or mistyped fields fall back', () => {
 });
 
 test('toolbar buttons are deduplicated, filtered and always keep settings', () => {
-  assert.deepEqual(sanitizeSettings({ toolbarButtons: ['history', 'bogus', 'history', 'downloads'] }).toolbarButtons, [
-    'history',
-    'downloads',
-    'settings',
-  ]);
+  assert.deepEqual(
+    sanitizeSettings({ toolbarButtons: ['history', 'bogus', 'technologies', 'history', 'downloads'] }).toolbarButtons,
+    ['history', 'downloads', 'settings'],
+  );
   assert.deepEqual(sanitizeSettings({ toolbarButtons: [] }).toolbarButtons, ['settings']);
   assert.equal(sanitizeSettings({ toolbarButtons: 'nope' }).toolbarButtons.length, 8);
+});
+
+test('the sidebar media player is on by default and stays off once turned off', () => {
+  assert.deepEqual(sanitizeSettings({}).sidebarWidgets, ['media']);
+  assert.deepEqual(sanitizeSettings({ sidebarWidgets: [] }).sidebarWidgets, []);
+  assert.deepEqual(sanitizeSettings({ sidebarWidgets: ['clock', 'media', 'media', 3] }).sidebarWidgets, ['media']);
+});
+
+test('the removed ask-where-to-save option keeps downloads prompting', () => {
+  assert.equal(sanitizeSettings({ askBeforeDownload: false, askDownloadLocation: true }).askBeforeDownload, true);
+  assert.equal(sanitizeSettings({ askBeforeDownload: false }).askBeforeDownload, false);
 });
 
 test('download settings persist absolute folders and reject invalid paths', () => {
@@ -100,12 +111,11 @@ test('download settings persist absolute folders and reject invalid paths', () =
   try {
     const store = new SettingsStore(dir);
     const folder = path.join(dir, 'Downloads');
-    store.update({ downloadDirectory: folder, askDownloadLocation: true });
-    store.update({ downloadDirectory: 'relative/path', askDownloadLocation: 'yes' });
+    store.update({ downloadDirectory: folder });
+    store.update({ downloadDirectory: 'relative/path' });
     store.update({ downloadDirectory: '/bad\0path' });
     const reloaded = new SettingsStore(dir);
     assert.equal(reloaded.get().downloadDirectory, folder);
-    assert.equal(reloaded.get().askDownloadLocation, true);
     reloaded.update({ downloadDirectory: null });
     assert.equal(new SettingsStore(dir).get().downloadDirectory, null);
   } finally {
@@ -126,15 +136,12 @@ test('updates keep valid fields and persist', () => {
       pinnedDisplay: 'expanded',
       sidebarVisible: false,
       toolbarVisible: false,
-      toolbarTabs: false,
       toolbarButtons: ['downloads', 'settings'],
-      freezeBackgroundTabs: false,
       discardAfterMinutes: 0,
       adBlocking: false,
       httpsOnly: true,
       blockThirdPartyCookies: true,
       secureDns: 'quad9',
-      fontSize: 'large',
       defaultZoom: 1.25,
       interfaceLanguage: 'tr',
       askBeforeDownload: false,
@@ -150,16 +157,13 @@ test('updates keep valid fields and persist', () => {
     assert.equal(reloaded.panelSide, 'right');
     assert.equal(reloaded.sidebarVisible, false);
     assert.equal(reloaded.toolbarVisible, false);
-    assert.equal(reloaded.toolbarTabs, false);
     assert.equal(reloaded.pinnedDisplay, 'expanded');
     assert.deepEqual(reloaded.toolbarButtons, ['downloads', 'settings']);
-    assert.equal(reloaded.freezeBackgroundTabs, false);
     assert.equal(reloaded.discardAfterMinutes, 0);
     assert.equal(reloaded.adBlocking, false);
     assert.equal(reloaded.httpsOnly, true);
     assert.equal(reloaded.blockThirdPartyCookies, true);
     assert.equal(reloaded.secureDns, 'quad9');
-    assert.equal(reloaded.fontSize, 'large');
     assert.equal(reloaded.defaultZoom, 1.25);
     assert.equal(reloaded.interfaceLanguage, 'tr');
     assert.equal(reloaded.askBeforeDownload, false);
@@ -189,4 +193,25 @@ test('agent origins keep unique http and https origins only', () => {
     }).agentOrigins,
     ['https://app.ngrok.app', 'http://192.168.1.5:3000'],
   );
+});
+
+test('the invitation name is trimmed, single-spaced and capped, and the accent stays in the palette', () => {
+  const values = sanitizeSettings({ displayName: '  Ada \n  Lovelace\u0007 ', accentColor: 'ocean' });
+  assert.equal(values.displayName, 'Ada Lovelace');
+  assert.equal(values.accentColor, 'ocean');
+  assert.equal(sanitizeSettings({ displayName: 'x'.repeat(80) }).displayName.length, 40);
+  assert.equal(sanitizeSettings({ accentColor: '#ff0000' }).accentColor, 'orange');
+  assert.equal(sanitizeSettings({ invitationSeen: 'yes' }).invitationSeen, false);
+  assert.equal(sanitizeSettings({ letterSeen: 'yes' }).letterSeen, false);
+  assert.equal(sanitizeSettings({ letterCounted: 'yes' }).letterCounted, false);
+});
+
+test('the glass tint is a whole percentage between 0 and 100', () => {
+  assert.equal(sanitizeSettings({}).glassTint, 25);
+  assert.equal(sanitizeSettings({ glassTint: 0 }).glassTint, 0);
+  assert.equal(sanitizeSettings({ glassTint: 62.6 }).glassTint, 63);
+  assert.equal(sanitizeSettings({ glassTint: 180 }).glassTint, 100);
+  assert.equal(sanitizeSettings({ glassTint: -4 }).glassTint, 0);
+  for (const value of ['40', null, Number.NaN, Infinity])
+    assert.equal(sanitizeSettings({ glassTint: value }).glassTint, 25);
 });

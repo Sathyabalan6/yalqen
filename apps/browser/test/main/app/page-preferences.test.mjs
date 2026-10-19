@@ -2,13 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import preferences from '../../../dist/main/app/page-preferences.js';
 
-const { acceptLanguages, chromeUserAgent, fontPreferences, signInUserAgent, spellCheckerLanguages } = preferences;
-
-test('font sizes follow Chromium steps', () => {
-  assert.deepEqual(fontPreferences('medium'), { defaultFontSize: 16, defaultMonospaceFontSize: 13 });
-  assert.deepEqual(fontPreferences('xlarge'), { defaultFontSize: 24, defaultMonospaceFontSize: 20 });
-  assert.deepEqual(fontPreferences('small'), { defaultFontSize: 12, defaultMonospaceFontSize: 10 });
-});
+const { acceptLanguages, chromeUserAgent, signInUserAgent, spellCheckerLanguages } = preferences;
 
 test('languages are ordered by the chosen preference', () => {
   assert.equal(acceptLanguages('tr'), 'tr-TR,tr,en-US,en');

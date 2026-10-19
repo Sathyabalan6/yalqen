@@ -5,7 +5,6 @@ import {
   type Rectangle,
   type Session,
   type WebContents,
-  type WebPreferences,
 } from 'electron';
 import {
   BOOKMARKS_URL,
@@ -62,7 +61,7 @@ import type { PersistChange, SavedTab, SavedWindow } from './persistence.js';
 import { isActivation, mayOpenWindow, opensInPlace, recordBlocked } from './popups.js';
 import { captureHistory, createTab, liveContents, savedTab, type RecentPage, type Tab } from './tab.js';
 import { checkBeforeUnload } from './before-unload.js';
-import { TabFreezer } from './tab-freezer.js';
+import { keepsPlaying, TabFreezer } from './tab-freezer.js';
 import { answerPausedRequest, needsDebugger, pushOverrides, releaseDebugger, rulesFor } from './tab-overrides.js';
 import { observeTab, unobserveTab } from './tab-agent.js';
 import { captureReference, captureSelection, highlightSelector, startPicking, type PickSession } from './tab-picker.js';
@@ -74,19 +73,27 @@ import { PAGE_TEXT_SCRIPT, PAGE_TEXT_WORLD_ID, parsePageText, type PageText } fr
 import { playwrightTest } from '../agent-bridge/playwright.js';
 import { tabForShortcut, tabListOrder } from './tab-shortcuts.js';
 import { READING_LIST_URL } from '../../shared/reading-list.js';
+import type { MediaInfo, MediaSkip } from '../../shared/sidebar-widgets.js';
+import {
+  MEDIA_READ_SCRIPT,
+  MEDIA_TOGGLE_SCRIPT,
+  MEDIA_WORLD_ID,
+  mediaSeekScript,
+  mediaSkipScript,
+  parsePageMedia,
+  type PageMedia,
+} from './media.js';
 import { tabGroupName, type TabGroup } from '../../shared/tab-groups.js';
 import { WORKSPACES_URL } from '../../shared/workspaces.js';
 import { webAppContains } from '../../shared/web-apps.js';
 import { bulkCloseTargets, type BulkCloseMode } from './bulk-tabs.js';
 import { selectTabIds, moveTabSelection, type TabSelectionMode } from '../../shared/tab-selection.js';
 import { TabTranslation } from './tab-translation.js';
-import { CertificateTracker, type CertificateDetails } from '../privacy/certificate-details.js';
+import { certificateChainFor, type CertificateDetails } from '../privacy/certificate-details.js';
 import { stepZoom } from './zoom.js';
 import { MAX_CLOSED_TABS } from './closed-tabs.js';
 
 const STORAGE_WORLD_ID = 1001;
-// Past this the badge reads "99+", so further errors need not re-render the chrome.
-const MAX_CONSOLE_ERRORS = 99;
 const MAX_PINCH_ZOOM = 3;
 
 type Listen = WebContents['on'];
@@ -119,7 +126,6 @@ interface TabManagerOptions {
   zoomFor: (url: string, isPrivate: boolean) => number;
   defaultZoom: () => number;
   hasOwnZoom: (url: string, isPrivate: boolean) => boolean;
-  pagePreferences: () => Partial<WebPreferences>;
   onZoom: (url: string, factor: number, isPrivate: boolean) => void;
   hasCertificateException: (url: string) => boolean;
   certificateToken: (url: string) => string | null;
@@ -159,9 +165,8 @@ export class TabManager {
   private readonly freezer: TabFreezer;
   private readonly translation: TabTranslation;
   private picking: PickSession | null = null;
-  private readonly certificateTrackers = new WeakMap<WebContents, CertificateTracker>();
-  private readonly preparingViews = new WeakSet<WebContentsView>();
   private readonly closing = new Set<TabId>();
+  private media: { tabId: TabId; info: PageMedia | null; updatedAt: number } | null = null;
   private readonly navigations = new WeakMap<Tab, number>();
   private selected = new Set<TabId>();
   private selectionAnchor: TabId | null = null;
@@ -616,6 +621,69 @@ export class TabManager {
     this.activate(tab.id);
   }
 
+  toggleMedia(id: TabId): void {
+    this.runMedia(id, MEDIA_TOGGLE_SCRIPT);
+  }
+
+  seekMedia(id: TabId, seconds: number): void {
+    if (!Number.isFinite(seconds)) return;
+    this.runMedia(id, mediaSeekScript(Math.max(-3600, Math.min(3600, Math.round(seconds)))));
+  }
+
+  skipMedia(id: TabId, direction: MediaSkip): void {
+    if (direction === 'previous' || direction === 'next') this.runMedia(id, mediaSkipScript(direction));
+  }
+
+  // The sidebar player follows the tab that played sound last, until it closes or loses its media.
+  mediaState(): MediaInfo | null {
+    const tab = this.media ? this.find(this.media.tabId) : undefined;
+    const contents = liveContents(tab);
+    if (!this.media || !tab || !contents) return null;
+    const info = this.media.info;
+    const audible = contents.isCurrentlyAudible();
+    const host = URL.canParse(tab.url) ? new URL(tab.url).hostname.replace(/^www\./, '') : '';
+    return {
+      tabId: tab.id,
+      title: info?.title || tab.title || host,
+      duration: info?.duration ?? null,
+      position: info?.position ?? null,
+      // Chromium keeps a tab audible for a moment after it pauses, so a found element's own state wins.
+      playing: info && info.position !== null ? !info.paused : audible,
+      canPrevious: info?.canPrevious ?? false,
+      canNext: info?.canNext ?? false,
+      updatedAt: this.media.updatedAt,
+    };
+  }
+
+  // A paused background tab gets frozen once it falls silent, and a frozen page runs no script,
+  // so the player wakes it before pressing play or seeking.
+  private runMedia(id: TabId, code: string): void {
+    const tab = this.find(id);
+    const contents = liveContents(tab);
+    if (!tab || !contents) return;
+    void this.freezer
+      .unfreeze(tab)
+      .then(() => contents.executeJavaScriptInIsolatedWorld(MEDIA_WORLD_ID, [{ code }], true))
+      .then(() => setTimeout(() => void this.refreshMedia(id), 150))
+      .catch(() => {});
+  }
+
+  private refreshMedia(id: TabId): Promise<void> {
+    const contents = liveContents(this.find(id));
+    if (!contents || this.media?.tabId !== id) return Promise.resolve();
+    return contents
+      .executeJavaScriptInIsolatedWorld(MEDIA_WORLD_ID, [{ code: MEDIA_READ_SCRIPT }], false)
+      .then((raw) => {
+        if (this.media?.tabId !== id) return;
+        const info = parsePageMedia(raw);
+        // A page whose media went away (navigated, removed) drops the player unless it still plays sound.
+        if (info && info.position === null && info.paused && !contents.isCurrentlyAudible()) this.media = null;
+        else this.media = { tabId: id, info, updatedAt: Date.now() };
+        this.changed();
+      })
+      .catch(() => {});
+  }
+
   move(id: TabId, toIndex: number): void {
     const from = this.indexOf(id);
     if (from < 0) return;
@@ -650,7 +718,7 @@ export class TabManager {
         active: tab.id === this.activeId,
         pinned: tab.pinnedUrl !== null,
         loading: tab.loading,
-        audible: contents.isCurrentlyAudible(),
+        audible: contents.isCurrentlyAudible() || keepsPlaying(tab),
         devToolsOpen: contents.isDevToolsOpened(),
         edited: tab.edited,
         inactiveSince: tab.inactiveSince,
@@ -745,12 +813,6 @@ export class TabManager {
     const upgraded = this.options.upgradeHttp(url);
     tab.upgrade = upgraded ? { https: upgraded, http: url } : null;
     if (upgraded) url = upgraded;
-    if (tab.view && this.preparingViews.has(tab.view)) {
-      tab.url = url;
-      tab.history = null;
-      this.changed(true);
-      return;
-    }
     if (!tab.view && tab.emulation) {
       tab.url = url;
       tab.history = null;
@@ -783,11 +845,9 @@ export class TabManager {
     this.openSingle(pane ? `${SETTINGS_URL}${pane}` : SETTINGS_URL);
   }
 
-  async certificateChain(): Promise<CertificateDetails[] | null> {
-    const tab = this.active();
-    const contents = liveContents(tab);
-    if (!tab || !contents) return null;
-    return this.certificateTrackers.get(contents)?.read() ?? null;
+  certificateChain(): CertificateDetails[] | null {
+    const contents = liveContents(this.active());
+    return contents ? certificateChainFor(contents.session, contents.getURL()) : null;
   }
 
   activeContents(): WebContents | null {
@@ -1328,7 +1388,6 @@ export class TabManager {
 
     const view = new WebContentsView({
       webPreferences: {
-        ...this.options.pagePreferences(),
         preload: this.options.pagePreload,
         session: tab.isPrivate ? this.options.privateSession : this.options.session,
         sandbox: true,
@@ -1336,46 +1395,14 @@ export class TabManager {
         nodeIntegration: false,
       },
     });
-    const start = (prepared = false) => {
-      if (view.webContents.isDestroyed()) return;
-      if (prepared && !tab.history) {
-        view.webContents.once('did-navigate', () => {
-          tab.preparing = false;
-          const entries = view.webContents.navigationHistory.getAllEntries();
-          if (entries.slice(0, -1).every((entry) => entry.url === 'about:blank')) {
-            view.webContents.navigationHistory.clear();
-          }
-        });
-      } else tab.preparing = false;
-      const emulated = this.mount(tab, view);
-      if (emulated) {
-        void emulated.then(() => {
-          if (tab.view === view) this.load(tab, view);
-        });
-      } else this.load(tab, view);
-    };
-    // Electron rejects a history restore on contents that already loaded a page, even about:blank.
-    if (!tab.history && /^https?:/.test(tab.url) && typeof view.webContents.debugger.isAttached === 'function') {
-      // Network observation on an uninitialized renderer misses the first TLS
-      // connection. Prepare its blank frame before mounting browser listeners,
-      // so preparation never appears in history, visits or persisted tab state.
-      tab.view = view;
-      tab.loading = true;
-      tab.preparing = true;
-      this.preparingViews.add(view);
-      void view.webContents.loadURL('about:blank').then(
-        () => {
-          if (tab.view !== view || view.webContents.isDestroyed()) return;
-          view.webContents.navigationHistory.clear();
-          this.preparingViews.delete(view);
-          start(true);
-        },
-        () => {
-          this.preparingViews.delete(view);
-          if (tab.view === view && !view.webContents.isDestroyed()) start();
-        },
-      );
-    } else start();
+    const emulated = this.mount(tab, view);
+    if (emulated) {
+      void emulated.then(() => {
+        if (tab.view === view) this.load(tab, view);
+      });
+    } else {
+      this.load(tab, view);
+    }
     return view;
   }
 
@@ -1471,20 +1498,6 @@ export class TabManager {
     tab.detachListeners = () => {
       for (const dispose of disposers) dispose();
     };
-    if (typeof contents.debugger.isAttached === 'function') {
-      const tracker = new CertificateTracker(contents, (active) => {
-        tab.certificateLoading = active;
-        if (contents.isDestroyed()) return;
-        if (active) this.freezer.unfreeze(tab);
-        else {
-          releaseDebugger(tab, contents);
-          if (this.tabs.includes(tab)) this.freezer.maybeFreeze(tab);
-        }
-      });
-      this.certificateTrackers.set(contents, tracker);
-      disposers.push(() => tracker.stop());
-      tracker.begin(tab.url);
-    }
     // Registration order matters where several listeners share an event, so the groups run in sequence.
     this.listenForInput(tab, view, listen);
     this.listenForPageChrome(tab, view, listen);
@@ -1524,6 +1537,7 @@ export class TabManager {
     const contents = view.webContents;
     listen('did-navigate', (_event, url) => {
       tab.edited = false;
+      tab.interacted = false;
       view.setBackgroundColor(url === NEW_TAB_URL ? '#00000000' : '#ffffff');
       const factor = this.options.zoomFor(url, tab.isPrivate);
       if (Math.abs(contents.getZoomFactor() - factor) > 0.001) contents.setZoomFactor(factor);
@@ -1543,7 +1557,8 @@ export class TabManager {
   private listenForWindowRequests(tab: Tab, contents: WebContents, listen: Listen): void {
     listen('will-prevent-unload', (event) => {
       if (event.defaultPrevented) return;
-      if (this.options.confirmUnload(tab)) event.preventDefault();
+      // Like Chromium, a page the user never touched cannot hold the window or the app open.
+      if (!tab.interacted || this.options.confirmUnload(tab)) event.preventDefault();
     });
     listen('will-navigate', (event) => {
       if (this.routeAppNavigation(tab, event.url)) {
@@ -1563,7 +1578,10 @@ export class TabManager {
       void contents.loadURL(upgraded);
     });
     listen('input-event', (_event, input) => {
-      if (isActivation(input.type)) tab.activatedAt = Date.now();
+      if (isActivation(input.type)) {
+        tab.activatedAt = Date.now();
+        tab.interacted = true;
+      }
       if (input.type === 'char') tab.edited = true;
     });
     contents.setWindowOpenHandler(({ url }) => {
@@ -1599,6 +1617,8 @@ export class TabManager {
     });
     listen('page-title-updated', (_event, title) => {
       if (tab.url === contents.getURL()) this.options.onVisitTitle(tab.visitId, title);
+      // Players retitle the page per track, which is the cue to re-read the metadata.
+      if (this.media?.tabId === tab.id) void this.refreshMedia(tab.id);
       if (tab.title === title) return;
       tab.title = title;
       this.changed('lazy');
@@ -1623,8 +1643,25 @@ export class TabManager {
       this.changed();
     });
     listen('audio-state-changed', ({ audible }) => {
-      if (!audible) this.freezer.maybeFreeze(tab);
+      // The previous page's sound stops after the next one commits, which must not count as the new page's sound.
+      if (audible || tab.soundAt) tab.soundAt = Date.now();
+      if (audible) this.media = { tabId: tab.id, info: null, updatedAt: Date.now() };
+      const read = this.media?.tabId === tab.id ? this.refreshMedia(tab.id) : Promise.resolve();
+      // The player reads the paused state before the tab freezes, or it would keep showing it as playing.
+      if (!audible) void read.then(() => this.freezer.freezeAfterGap(tab));
       this.changed();
+    });
+    listen('media-started-playing', () => {
+      tab.playingMedia++;
+    });
+    listen('media-paused', () => {
+      tab.playingMedia = Math.max(0, tab.playingMedia - 1);
+      if (tab.soundAt) tab.soundAt = Date.now();
+      this.freezer.freezeAfterGap(tab);
+    });
+    listen('did-navigate', () => {
+      tab.playingMedia = 0;
+      tab.soundAt = 0;
     });
     listen('devtools-closed', () => this.freezer.maybeFreeze(tab));
     listen('did-start-navigation', ({ url, isMainFrame, isSameDocument }) => {
@@ -1636,14 +1673,8 @@ export class TabManager {
       this.syncAgentFor(tab, url);
       const hadTranslationState = tab.translation !== 'idle' || tab.pageLanguage !== null;
       this.translation.reset(tab);
-      if (tab.blockedPopups.length === 0 && tab.consoleErrors === 0 && !hadTranslationState) return;
+      if (tab.blockedPopups.length === 0 && !hadTranslationState) return;
       tab.blockedPopups = [];
-      tab.consoleErrors = 0;
-      this.changed();
-    });
-    listen('console-message', ({ level }) => {
-      if (level !== 'error' || tab.consoleErrors > MAX_CONSOLE_ERRORS) return;
-      tab.consoleErrors++;
       this.changed();
     });
   }
@@ -1808,12 +1839,15 @@ export class TabManager {
   private destroyView(tab: Tab): void {
     const view = tab.view;
     if (!view) return;
+    if (this.media?.tabId === tab.id) this.media = null;
     tab.detachListeners?.();
     tab.detachListeners = null;
     this.options.onHtmlFullScreenChange(tab.id, false);
     tab.view = null;
     tab.loading = false;
     tab.frozen = false;
+    tab.playingMedia = 0;
+    tab.soundAt = 0;
     tab.overrides = NO_OVERRIDES;
     tab.agent = null;
     this.translation.reset(tab);
@@ -1839,7 +1873,6 @@ export class TabManager {
       bookmarked: this.options.isBookmarked(tab.url),
       security: tab.failed ? 'local' : securityState(tab.url, this.options.hasCertificateException(tab.url)),
       blockedPopups: tab.blockedPopups.length,
-      consoleErrors: tab.consoleErrors,
       overrides: tab.overrides,
       translation: { status: tab.translation, available: this.translation.available(tab) },
       autoReloadSeconds: tab.autoReload?.seconds ?? null,

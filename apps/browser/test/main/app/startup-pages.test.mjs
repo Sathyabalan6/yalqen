@@ -24,18 +24,15 @@ test('automatic navigation accepts only explicit web addresses and deduplicates/
   ]);
   assert.equal(pages.sanitizeStartupUrls(Array.from({ length: 30 }, (_, i) => `https://example.com/${i}`)).length, 20);
 });
-test('homepage and startup addresses persist per profile and invalid patches preserve the homepage', () => {
+test('startup addresses persist per profile', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'yalqen-startup-'));
   try {
     const store = new settings.SettingsStore(root);
     store.update({
-      homePageUrl: 'https://home.example/',
       startupUrls: ['https://first.example/', 'https://second.example/'],
       startupBehavior: 'pages',
     });
-    store.update({ homePageUrl: 'javascript:alert(1)' });
     const values = new settings.SettingsStore(root).get();
-    assert.equal(values.homePageUrl, 'https://home.example/');
     assert.equal(values.startupBehavior, 'pages');
     assert.deepEqual(pages.startupPages(values.startupBehavior, values.startupUrls, false), [
       'https://first.example/',
@@ -51,15 +48,22 @@ test('homepage and startup addresses persist per profile and invalid patches pre
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
-test('the Home action uses tab navigation, preserving the active tab session, and an empty setting opens a new tab', () => {
+test('the Home action opens the first startup page only when specific pages are chosen, otherwise a new tab', () => {
   const urls = [];
   const host = {
-    app: { settings: { get: () => ({ homePageUrl: 'https://home.example/' }) } },
+    app: {
+      settings: {
+        get: () => ({ startupBehavior: 'pages', startupUrls: ['https://home.example/', 'https://other.example/'] }),
+      },
+    },
     tabs: { navigate: (url) => urls.push(url) },
   };
   windowModule.YalqenWindow.prototype.goHome.call(host);
   assert.deepEqual(urls, ['https://home.example/']);
-  host.app.settings.get = () => ({ homePageUrl: null });
+  host.app.settings.get = () => ({ startupBehavior: 'restore', startupUrls: ['https://home.example/'] });
   windowModule.YalqenWindow.prototype.goHome.call(host);
   assert.match(urls[1], /^yalqen:/);
+  host.app.settings.get = () => ({ startupBehavior: 'pages', startupUrls: [] });
+  windowModule.YalqenWindow.prototype.goHome.call(host);
+  assert.match(urls[2], /^yalqen:/);
 });

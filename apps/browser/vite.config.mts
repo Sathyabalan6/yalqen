@@ -18,6 +18,8 @@ export default defineConfig({
         settings: page('settings.html'),
         command: page('command.html'),
         find: page('find.html'),
+        welcome: page('welcome.html'),
+        letter: page('letter.html'),
       },
     },
   },

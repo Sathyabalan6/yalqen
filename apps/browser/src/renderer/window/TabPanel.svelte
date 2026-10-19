@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PanelSide, PinnedDisplay, ProfileKind, TabId, TabSnapshot } from '../../shared/types';
+  import type { MediaInfo } from '../../shared/sidebar-widgets';
   import { t } from '../../shared/i18n';
   import { cubicOut } from 'svelte/easing';
   import { flip } from 'svelte/animate';
@@ -7,8 +8,8 @@
   import { devStates } from './format';
   import Icon from '../ui/Icon.svelte';
   import NewTabButton from './NewTabButton.svelte';
+  import MediaPlayer from './MediaPlayer.svelte';
   import IconButton from '../ui/IconButton.svelte';
-  import TabGroupControls from './TabGroupControls.svelte';
   import type { TabGroup } from '../../shared/tab-groups';
 
   let {
@@ -28,6 +29,7 @@
     profile,
     profileName,
     pinnedDisplay,
+    media,
   }: {
     tabs: TabSnapshot[];
     listOrder: TabId[];
@@ -45,6 +47,7 @@
     profile: ProfileKind;
     profileName?: string;
     pinnedDisplay: PinnedDisplay;
+    media: MediaInfo | null;
   } = $props();
 
   type DragGroup = 'pinned' | 'listed';
@@ -538,14 +541,16 @@
           {/if}
         {/each}
 
-        {#if !collapsed}<TabGroupControls {groups} />{/if}
-
         {#if collapsed}
           <div class="new-tab-position">
             <NewTabButton />
           </div>
         {/if}
       </div>
+
+      {#if !collapsed && media}
+        <MediaPlayer {media} />
+      {/if}
 
       <footer class="footer" class:compact={collapsed}>
         {#if selectedTabIds.length > 1}
@@ -780,10 +785,6 @@
   .compact .selection {
     flex-direction: column;
     flex-basis: auto;
-  }
-
-  .favorite:not(.active) .favicon {
-    opacity: 0.7;
   }
 
   .favorite.discarded .favicon {
@@ -1033,6 +1034,10 @@
     margin-top: auto;
     gap: 2px;
     padding-top: 8px;
+  }
+
+  :global(.player) + .footer {
+    margin-top: 0;
   }
 
   .footer.compact {

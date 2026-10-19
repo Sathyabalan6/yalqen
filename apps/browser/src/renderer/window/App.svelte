@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { t } from '../../shared/i18n';
-  import type { BrowserState } from '../../shared/types';
+  import { DEFAULT_GLASS_TINT, type BrowserState } from '../../shared/types';
+  import type { TabGroup } from '../../shared/tab-groups';
   import { reuseBrowserState } from '../../shared/browser-state';
+  import { accentHex, DEFAULT_ACCENT } from '../../shared/accent';
   import { isNewTab } from './format';
   import DeviceControls from './DeviceControls.svelte';
   import TabPanel from './TabPanel.svelte';
@@ -21,15 +23,22 @@
 
   const COLLAPSED_WIDTH = 44;
   const CONTROL_SIZE = 34;
-  const PANEL_WIDTH = 180;
   const CHROME_HEIGHT = 44;
   const PAGE_INSET = 8;
   const PANEL_ROW_INSET = PAGE_INSET + 3;
+  const PINNED_COLUMNS = 4;
+  const PINNED_GAP = 6;
+  const PANEL_WIDTH =
+    (COLLAPSED_WIDTH - CONTROL_SIZE) / 2 +
+    PINNED_COLUMNS * CONTROL_SIZE +
+    (PINNED_COLUMNS - 1) * PINNED_GAP +
+    PANEL_ROW_INSET;
   const PAGE_RADIUS = 16;
   const WINDOW_CONTROLS_END = 88;
   const DEVICE_BEZEL = 10;
   const PANEL_ANIMATION_MS = 240;
   const CONTENT_SWAP_PROGRESS = 0.5;
+  const NO_GROUPS: TabGroup[] = [];
 
   let browser: BrowserState = $state.raw({
     tabs: [],
@@ -44,10 +53,13 @@
     panelSide: 'left',
     pinnedDisplay: 'always',
     sidebarVisible: true,
+    media: null,
     toolbarVisible: true,
     toolbarTabs: true,
     toolbarButtons: [],
     material: 'opaque',
+    glassTint: DEFAULT_GLASS_TINT,
+    accent: accentHex(DEFAULT_ACCENT),
     device: null,
     zoom: 1,
     defaultZoom: 1,
@@ -87,9 +99,13 @@
   const tabs = $derived(browser.tabs);
   const listOrder = $derived(browser.listOrder);
   const activeTabId = $derived(browser.activeTabId);
+  const selectedTabIds = $derived(browser.selectedTabIds);
+  const tabGroups = $derived(browser.tabGroups ?? NO_GROUPS);
   const activeTab = $derived(tabs.find((tab) => tab.id === activeTabId) ?? null);
   const developer = $derived(browser.developer);
   const profile = $derived(browser.profile);
+  const profileName = $derived(browser.profileName);
+  const media = $derived(browser.media);
   const pinnedDisplay = $derived(browser.pinnedDisplay);
   const sidebarVisible = $derived(browser.sidebarVisible);
   const toolbarVisible = $derived(browser.toolbarVisible);
@@ -104,6 +120,13 @@
   const agentPanelOpen = $derived(browser.agentPanelOpen);
   const agentSession = $derived(browser.agentSession);
   const agentChat = $derived(browser.agentChat);
+  const agentProviders = $derived(browser.agentProviders);
+  const projectRun = $derived(browser.projectRun);
+  const agentElements = $derived(browser.agentElements);
+  const agentTerminal = $derived(browser.agentTerminal);
+  const agentProjectId = $derived(browser.agentProjectId);
+  const agentConversationId = $derived(browser.agentConversationId);
+  const agentBackgroundChats = $derived(browser.agentBackgroundChats);
   const agentStatus = $derived(
     agentChat.status === 'error'
       ? 'error'
@@ -163,7 +186,9 @@
     } catch {}
   }
 
-  $effect(() => {
+  // These three run before the DOM updates: the first layout reaches the main process, which
+  // then shows the window, while the tab rows are still rendering.
+  $effect.pre(() => {
     const target = agentReservedWidth;
     const mode = `${agentCollapsed}|${agentVisible}`;
     const previousMode = agentMode;
@@ -203,7 +228,7 @@
     } catch {}
   }
 
-  $effect(() => {
+  $effect.pre(() => {
     const target = panelWidth;
     const mode = `${collapsed}|${sidebarVisible}`;
     const modeChanged = mode !== panelMode;
@@ -239,10 +264,12 @@
   const blank = $derived(activeTab !== null && isNewTab(activeTab.url));
   $effect(() => {
     document.documentElement.dataset.material = material;
+    document.documentElement.style.setProperty('--accent', browser.accent);
+    document.documentElement.style.setProperty('--glass-tint', String(browser.glassTint / 100));
     document.documentElement.toggleAttribute('data-fullscreen', windowFullScreen);
   });
 
-  $effect(() => {
+  $effect.pre(() => {
     if (!stateReceived) return;
     window.yalqen.setLayout({
       panelWidth,
@@ -260,12 +287,14 @@
   });
 
   onMount(() => {
+    // Requested first: the reply travels while the first localStorage read blocks on its storage area.
+    const initialState = window.yalqen.getState();
     try {
       const savedWidth = Number(localStorage.getItem('yalqen:agent-panel-width'));
       if (Number.isFinite(savedWidth) && savedWidth >= MIN_AGENT_PANEL_WIDTH) requestedAgentWidth = savedWidth;
       agentCollapsed = localStorage.getItem('yalqen:agent-panel-collapsed') === 'true';
     } catch {}
-    void window.yalqen.getState().then((next) => {
+    void initialState.then((next) => {
       browser = reuseBrowserState(browser, next);
       stateReceived = true;
       requestAnimationFrame(() => (animateModeChanges = true));
@@ -309,8 +338,8 @@
         {listOrder}
         {developer}
         {activeTabId}
-        selectedTabIds={browser.selectedTabIds}
-        groups={browser.tabGroups ?? []}
+        {selectedTabIds}
+        groups={tabGroups}
         collapsed={contentCollapsed}
         fading={contentFading}
         {side}
@@ -319,8 +348,9 @@
         edgeInset={(COLLAPSED_WIDTH - CONTROL_SIZE) / 2}
         fullWidth={PANEL_WIDTH}
         {profile}
-        profileName={browser.profileName}
+        {profileName}
         {pinnedDisplay}
+        {media}
       />
     {/if}
     {#if toolbarVisible}
@@ -403,15 +433,15 @@
         open={agentVisible}
         session={agentSession}
         chat={agentChat}
-        providers={browser.agentProviders}
-        run={browser.projectRun}
-        elements={browser.agentElements}
-        terminal={browser.agentTerminal}
-        projectId={browser.agentProjectId}
-        conversationId={browser.agentConversationId}
-        backgroundChats={browser.agentBackgroundChats}
-        tabs={browser.tabs}
-        developer={browser.developer}
+        providers={agentProviders}
+        run={projectRun}
+        elements={agentElements}
+        terminal={agentTerminal}
+        projectId={agentProjectId}
+        conversationId={agentConversationId}
+        backgroundChats={agentBackgroundChats}
+        {tabs}
+        {developer}
         {activeTab}
         width={agentWidth}
         collapsed={agentContentCollapsed}

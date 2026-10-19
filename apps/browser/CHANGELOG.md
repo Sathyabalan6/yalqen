@@ -1,5 +1,222 @@
 # Changelog
 
+## [0.3.70](https://github.com/YSamed/yalqen/compare/v0.3.69...v0.3.70) (2026-10-15)
+
+
+### Features
+
+* add sealed thank-you letter and anonymous letter count ([#276](https://github.com/YSamed/yalqen/issues/276)) ([52dd8bf](https://github.com/YSamed/yalqen/commit/52dd8bfc64b68042b5be58a5c620dac7abc7bdfe))
+
+## [0.3.69](https://github.com/YSamed/yalqen/compare/v0.3.68...v0.3.69) (2026-10-15)
+
+
+### Bug Fixes
+
+* sign the mac app with the osx-sign 2 api ([#273](https://github.com/YSamed/yalqen/issues/273)) ([5032a6d](https://github.com/YSamed/yalqen/commit/5032a6dffa9f86ec285496a57b45c1f38614cba7))
+
+## [0.3.68](https://github.com/YSamed/yalqen/compare/v0.3.67...v0.3.68) (2026-10-14)
+
+
+### Bug Fixes
+
+* ignore the previous page's silence when protecting background media ([#272](https://github.com/YSamed/yalqen/issues/272)) ([ba37146](https://github.com/YSamed/yalqen/commit/ba37146d7313d5013e66260aab93dc1c3a5e5aed))
+* keep background media playing through quiet passages ([#270](https://github.com/YSamed/yalqen/issues/270)) ([9e325dd](https://github.com/YSamed/yalqen/commit/9e325dd50eecddc02032002d6eeb7ab9e4afcbb8))
+
+## [0.3.67](https://github.com/YSamed/yalqen/compare/v0.3.66...v0.3.67) (2026-10-13)
+
+
+### Bug Fixes
+
+* **tabs:** restore tab dragging by activating tabs on click again ([#263](https://github.com/YSamed/yalqen/issues/263)) ([4221d03](https://github.com/YSamed/yalqen/commit/4221d030bd12a84dcaff4241a788988b17b7efeb))
+
+## [0.3.66](https://github.com/YSamed/yalqen/compare/v0.3.65...v0.3.66) (2026-10-13)
+
+
+### Bug Fixes
+
+* **window:** show the window after the interface has painted ([#261](https://github.com/YSamed/yalqen/issues/261)) ([81fb96d](https://github.com/YSamed/yalqen/commit/81fb96d3b1f35ed6b11dc85a1f3f72ea8389142b))
+
+## [0.3.65](https://github.com/YSamed/yalqen/compare/v0.3.64...v0.3.65) (2026-10-13)
+
+
+### Features
+
+* switch tabs on press and add an adjustable glass tint ([#259](https://github.com/YSamed/yalqen/issues/259)) ([28753a8](https://github.com/YSamed/yalqen/commit/28753a86abd2dec39f77ae70e9190d0ca7066e45))
+
+## [0.3.64](https://github.com/YSamed/yalqen/compare/v0.3.63...v0.3.64) (2026-10-12)
+
+
+### Features
+
+* **toolbar:** show connection security by lock color only ([#257](https://github.com/YSamed/yalqen/issues/257)) ([4d3c1de](https://github.com/YSamed/yalqen/commit/4d3c1de83ee89a7691630fd95583d13315ba97b9))
+
+## [0.3.63](https://github.com/YSamed/yalqen/compare/v0.3.62...v0.3.63) (2026-10-12)
+
+
+### Performance
+
+* show the first window sooner and cut agent chat streaming cost ([#255](https://github.com/YSamed/yalqen/issues/255)) ([3bcef6b](https://github.com/YSamed/yalqen/commit/3bcef6b6331761dd0188c02153978c300b70dacd))
+
+## [0.3.62](https://github.com/YSamed/yalqen/compare/v0.3.61...v0.3.62) (2026-10-12)
+
+
+### Features
+
+* redesign sidebar media player as capsule with track skip ([#253](https://github.com/YSamed/yalqen/issues/253)) ([0ef5aa6](https://github.com/YSamed/yalqen/commit/0ef5aa6ff88091242b4c7512c7afb36fbbea380a))
+
+## [0.3.61](https://github.com/YSamed/yalqen/compare/v0.3.60...v0.3.61) (2026-10-12)
+
+
+### Features
+
+* **welcome:** thank-you invitation card and accent color ([#250](https://github.com/YSamed/yalqen/issues/250)) ([af792ba](https://github.com/YSamed/yalqen/commit/af792ba4b6a4822baeb36900ac825e8f51c82a1a))
+
+
+### Bug Fixes
+
+* **media:** make the sidebar player's play, pause and seek reliable ([#251](https://github.com/YSamed/yalqen/issues/251)) ([8a84489](https://github.com/YSamed/yalqen/commit/8a84489ba3e35dcfed88460e7d0cd571f2ef27fe))
+
+## [0.3.60](https://github.com/YSamed/yalqen/compare/v0.3.59...v0.3.60) (2026-10-11)
+
+
+### Features
+
+* **autofill:** fill verification codes from open mail tabs ([#247](https://github.com/YSamed/yalqen/issues/247)) ([1f26530](https://github.com/YSamed/yalqen/commit/1f265309abbce579e4eee89e92d79053a37881ec))
+
+## [0.3.59](https://github.com/YSamed/yalqen/compare/v0.3.58...v0.3.59) (2026-10-11)
+
+
+### Features
+
+* **settings:** merge site permissions, exceptions and data into one list ([#246](https://github.com/YSamed/yalqen/issues/246)) ([5100c7c](https://github.com/YSamed/yalqen/commit/5100c7cb3b6d10f368bc3e453173bd6b479807df))
+
+## [0.3.58](https://github.com/YSamed/yalqen/compare/v0.3.57...v0.3.58) (2026-10-11)
+
+
+### Features
+
+* **settings:** simplify General and Privacy ([#244](https://github.com/YSamed/yalqen/issues/244)) ([eb67b5a](https://github.com/YSamed/yalqen/commit/eb67b5a92dda9ebfe98f157d0958d063b69e08a1))
+
+## [0.3.57](https://github.com/YSamed/yalqen/compare/v0.3.56...v0.3.57) (2026-10-11)
+
+
+### Features
+
+* **settings:** visual pickers and a toolbar preview in Appearance ([#242](https://github.com/YSamed/yalqen/issues/242)) ([0148d06](https://github.com/YSamed/yalqen/commit/0148d060fa36acdb5d9e992fb6e8e2e65d694f66))
+
+## [0.3.56](https://github.com/YSamed/yalqen/compare/v0.3.55...v0.3.56) (2026-10-11)
+
+
+### Features
+
+* make the sidebar media player minimal ([#241](https://github.com/YSamed/yalqen/issues/241)) ([f659dfe](https://github.com/YSamed/yalqen/commit/f659dfe971311fa58dc5917318c3b1b0fbb49a95))
+* replace sidebar widgets with a cover-art media player ([#239](https://github.com/YSamed/yalqen/issues/239)) ([1fc1955](https://github.com/YSamed/yalqen/commit/1fc195585a5516c8fefe7f63b0ce04c5d58cb51f))
+
+## [0.3.55](https://github.com/YSamed/yalqen/compare/v0.3.54...v0.3.55) (2026-10-11)
+
+
+### Features
+
+* make sidebar widgets a compact panel of single-line rows ([#237](https://github.com/YSamed/yalqen/issues/237)) ([fac6992](https://github.com/YSamed/yalqen/commit/fac6992a2efd1c0c410d4c2d32caa4a74b4825c2))
+
+## [0.3.54](https://github.com/YSamed/yalqen/compare/v0.3.53...v0.3.54) (2026-10-11)
+
+
+### Features
+
+* add optional sidebar widgets with drag-and-drop ordering ([#235](https://github.com/YSamed/yalqen/issues/235)) ([28852f1](https://github.com/YSamed/yalqen/commit/28852f15d263f0abb346ba645aed7dbeef351aa3))
+
+## [0.3.53](https://github.com/YSamed/yalqen/compare/v0.3.52...v0.3.53) (2026-10-11)
+
+
+### Features
+
+* **settings:** reorganize panes and add settings search ([#233](https://github.com/YSamed/yalqen/issues/233)) ([9676a17](https://github.com/YSamed/yalqen/commit/9676a170affda6d9b7061df5f43e66536853c459))
+
+## [0.3.52](https://github.com/YSamed/yalqen/compare/v0.3.51...v0.3.52) (2026-10-11)
+
+
+### Bug Fixes
+
+* speed up tab opening and stop threat-list refreshes from blocking ([#231](https://github.com/YSamed/yalqen/issues/231)) ([8824589](https://github.com/YSamed/yalqen/commit/88245897321a2ce3efceb2859d419219edf200b5))
+
+## [0.3.51](https://github.com/YSamed/yalqen/compare/v0.3.50...v0.3.51) (2026-10-11)
+
+
+### Features
+
+* follow the transparency setting in the command bar and new tab page ([#229](https://github.com/YSamed/yalqen/issues/229)) ([7154839](https://github.com/YSamed/yalqen/commit/7154839e311acf142e6d7a8638968b2c4785d7c2))
+
+## [0.3.50](https://github.com/YSamed/yalqen/compare/v0.3.49...v0.3.50) (2026-10-11)
+
+
+### Features
+
+* refine solid window palette to neutral near-black and clean light ([#227](https://github.com/YSamed/yalqen/issues/227)) ([2baca7c](https://github.com/YSamed/yalqen/commit/2baca7ce1b1ee95b6bc9e43f0a7fa18e8aab528b))
+
+## [0.3.49](https://github.com/YSamed/yalqen/compare/v0.3.48...v0.3.49) (2026-10-10)
+
+
+### Features
+
+* add built-in site technology detection and toolbar button ([#225](https://github.com/YSamed/yalqen/issues/225)) ([db50d5f](https://github.com/YSamed/yalqen/commit/db50d5fb9f620ccb4c16a68c652a0434d54faa31))
+
+## [0.3.48](https://github.com/YSamed/yalqen/compare/v0.3.47...v0.3.48) (2026-10-10)
+
+
+### Features
+
+* add transparency setting and keep pinned favicons opaque ([46bcdc0](https://github.com/YSamed/yalqen/commit/46bcdc0a2905b149b1482cb64fc51f65884c04fb))
+
+## [0.3.47](https://github.com/YSamed/yalqen/compare/v0.3.46...v0.3.47) (2026-10-10)
+
+
+### Bug Fixes
+
+* skip unload prompt for untouched pages on quit ([#222](https://github.com/YSamed/yalqen/issues/222)) ([713c899](https://github.com/YSamed/yalqen/commit/713c89915ffc1759a96bcb6e5572a63d2ce77020))
+
+## [0.3.46](https://github.com/YSamed/yalqen/compare/v0.3.45...v0.3.46) (2026-10-10)
+
+
+### Bug Fixes
+
+* fit sidebar to pinned tabs and close window on cmd+w ([#220](https://github.com/YSamed/yalqen/issues/220)) ([d158d79](https://github.com/YSamed/yalqen/commit/d158d79c0326d847223d1316a245c321b312d740))
+
+## [0.3.45](https://github.com/YSamed/yalqen/compare/v0.3.44...v0.3.45) (2026-10-10)
+
+
+### Bug Fixes
+
+* fit sidebar to four pinned tabs and remove group controls ([#217](https://github.com/YSamed/yalqen/issues/217)) ([7f2b727](https://github.com/YSamed/yalqen/commit/7f2b727788ab5289524a4e745d770d11cf4f6e58))
+
+## [0.3.44](https://github.com/YSamed/yalqen/compare/v0.3.43...v0.3.44) (2026-10-10)
+
+
+### Bug Fixes
+
+* send color scheme hint on first page load ([#214](https://github.com/YSamed/yalqen/issues/214)) ([a778ef1](https://github.com/YSamed/yalqen/commit/a778ef18ff16bd7a783f8162e066104ab5f2eb99))
+
+## [0.3.43](https://github.com/YSamed/yalqen/compare/v0.3.42...v0.3.43) (2026-10-10)
+
+
+### Features
+
+* cycle tab panel and unify panel shortcuts ([#213](https://github.com/YSamed/yalqen/issues/213)) ([08d62a3](https://github.com/YSamed/yalqen/commit/08d62a36d7bd4716bacb23ece1ba2ffb34d1e323))
+
+## [0.3.42](https://github.com/YSamed/yalqen/compare/v0.3.41...v0.3.42) (2026-10-10)
+
+
+### Features
+
+* increase glass window transparency ([#210](https://github.com/YSamed/yalqen/issues/210)) ([3662296](https://github.com/YSamed/yalqen/commit/366229679824612fc2c36343de337a47de049055))
+
+## [0.3.41](https://github.com/YSamed/yalqen/compare/v0.3.40...v0.3.41) (2026-10-10)
+
+
+### Bug Fixes
+
+* keep dock icon size stable in packaged app ([#209](https://github.com/YSamed/yalqen/issues/209)) ([cbcf968](https://github.com/YSamed/yalqen/commit/cbcf968c141690240038b7ca4f6643d7d92dc86e))
+
 ## [0.3.40](https://github.com/YSamed/yalqen/compare/v0.3.39...v0.3.40) (2026-10-09)
 
 

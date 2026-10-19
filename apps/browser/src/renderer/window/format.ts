@@ -14,16 +14,9 @@ export function siteLabel(tab: TabSnapshot): string {
   return tab.title;
 }
 
-export function consoleErrorCount(tab: TabSnapshot): string {
-  return tab.consoleErrors > 99 ? '99+' : String(tab.consoleErrors);
-}
-
 export function devStates(tab: TabSnapshot): string[] {
   const { overrides } = tab;
   return [
-    tab.consoleErrors > 0
-      ? t('format.consoleErrors', { count: tab.consoleErrors > 99 ? '99+' : tab.consoleErrors })
-      : null,
     overrides.cacheDisabled ? t('format.cacheOff') : null,
     overrides.network === 'offline' ? t('format.offline') : overrides.network ? t('format.networkThrottled') : null,
     tab.autoReloadSeconds ? t('format.autoReloading') : null,

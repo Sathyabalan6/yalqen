@@ -2,7 +2,6 @@
   import { DISCARD_AFTER_MINUTES, type SettingsValues } from '../../shared/types';
   import { t, type MessageKey } from '../../shared/i18n';
   import SegmentedControl from '../ui/SegmentedControl.svelte';
-  import Switch from '../ui/Switch.svelte';
   import ProcessUsage from './ProcessUsage.svelte';
   import SettingRow from './SettingRow.svelte';
 
@@ -23,13 +22,6 @@
 </script>
 
 <h2>{t('settings.memory')}</h2>
-<SettingRow title={t('settings.freezeBackgroundTabs')} hint={t('settings.freezeBackgroundTabsHint')}>
-  <Switch
-    label={t('settings.freezeBackgroundTabs')}
-    checked={values.freezeBackgroundTabs}
-    onchange={(checked) => update({ freezeBackgroundTabs: checked })}
-  />
-</SettingRow>
 <SettingRow title={t('settings.discardUnusedTabs')} hint={t('settings.discardUnusedTabsHint')}>
   <SegmentedControl
     label={t('settings.discardUnusedTabs')}

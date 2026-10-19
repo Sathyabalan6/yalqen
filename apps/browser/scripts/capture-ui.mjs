@@ -168,6 +168,13 @@ const permissions = {
   sites: [{ origin: 'https://meet.example.com', permissions: [{ kind: 'camera', decision: 'allow' }, { kind: 'microphone', decision: 'allow' }] }],
   system: { camera: 'granted', microphone: 'denied', screen: 'not-determined' },
 };
+const storage = [
+  { domain: 'example.com', origins: 2, cookies: 12, databaseBytes: 2516582 },
+  { domain: 'github.com', origins: 3, cookies: 41, databaseBytes: 18874368 },
+  { domain: 'localhost', origins: 1, cookies: 2, databaseBytes: 348160 },
+  { domain: 'wikipedia.org', origins: 2, cookies: 4, databaseBytes: 1048576 },
+];
+const icons = { 'github.com': 'https://github.githubassets.com/favicons/favicon.svg', 'wikipedia.org': 'https://www.wikipedia.org/static/favicon/wikipedia.ico' };
 contextBridge.exposeInMainWorld('yalqenSettings', {
   get: async () => view, update: async () => view, onChange: none, clearData: async () => {}, makeDefault: async () => view,
   processUsage: async () => ({ totalMB: 512, groups: [], pages: [] }), checkForUpdates: async () => {}, installUpdate: async () => {},
@@ -181,13 +188,16 @@ contextBridge.exposeInMainWorld('yalqenSettings', {
   onAgentBridgeChange: none,
   sitePermissions: async () => permissions, setSitePermission: async () => permissions,
   forgetSitePermissions: async () => permissions, openSystemSettings: async () => {},
+  siteStorage: async (query) => ({ sites: storage.filter((site) => site.domain.includes(query)), total: storage.length, offset: 0, more: false, limited: false }),
+  clearSiteStorage: async () => false,
+  siteIcons: async (domains) => Object.fromEntries(domains.filter((domain) => icons[domain]).map((domain) => [domain, icons[domain]])),
 });`,
     window: (material) => `
 const { contextBridge } = require('electron');
 const tab = (index) => ({
   id: 'tab-' + index, title: 'Page ' + index, url: 'https://site' + index + '.example/', faviconUrl: null,
   live: index === 0, frozen: false, loading: index === 2, pinned: index === 1, security: 'secure', isPrivate: false,
-  bookmarked: false, blockedPopups: 0, consoleErrors: 0,
+  bookmarked: false, blockedPopups: 0,
   overrides: { cacheDisabled: false, network: null, colorScheme: null, reducedMotion: false, printMedia: false, userAgent: null, requestRules: false },
   translation: { status: 'idle', available: false }, autoReloadSeconds: null, audible: false, muted: false,
   canGoBack: index === 0, canGoForward: false, agentObserved: index === 0, agentReadAt: null, agentEpisode: null, agentRules: 0,
@@ -195,7 +205,7 @@ const tab = (index) => ({
 const state = {
   tabs: [0, 1, 2, 3, 4].map(tab), listOrder: ['tab-0', 'tab-1', 'tab-2', 'tab-3', 'tab-4'], developer: false,
   activeTabId: 'tab-0', pageFullScreen: false, windowFullScreen: false, addressPlaceholder: 'Search or type an address',
-  panelCollapsed: false, panelSide: 'left', pinnedDisplay: 'list', sidebarVisible: true, toolbarVisible: true, toolbarTabs: true,
+  panelCollapsed: false, panelSide: 'left', pinnedDisplay: 'list', sidebarVisible: true, media: null, toolbarVisible: true, toolbarTabs: true,
   toolbarButtons: ['bookmarks', 'history', 'settings', 'downloads'], material: ${JSON.stringify(material)}, device: null,
   zoom: 1, defaultZoom: 1, downloads: { active: 1, progress: 0.4, started: 1 }, extensions: false, profile: 'personal',
   agentPanelOpen: false, agentSession: { id: null, directory: null, status: 'idle', exitCode: null, error: null },
@@ -267,7 +277,11 @@ contextBridge.exposeInMainWorld('yalqen', {
       ],
     }),
     showWelcome: () => false,
+    readyUpdate: () => null,
+    showAnnouncement: () => false,
+    showFeedback: () => false,
     showRepoPrompt: () => false,
+    opaque: () => false,
     suggestions: () => [],
   };
 
@@ -303,11 +317,13 @@ contextBridge.exposeInMainWorld('yalqen', {
       { name: 'bookmarks', url: 'yalqen://bookmarks/' },
       { name: 'downloads', url: 'yalqen://downloads/' },
       { name: 'error', file: errorPage },
-      ...['general', 'appearance', 'privacy', 'passwords', 'performance', 'extensions', 'developer'].map((pane) => ({
-        name: `settings-${pane}`,
-        url: pane === 'general' ? 'yalqen://settings/' : `yalqen://settings/${pane}`,
-        preload: 'settings.cjs',
-      })),
+      ...['general', 'appearance', 'privacy', 'sites', 'passwords', 'performance', 'extensions', 'developer'].map(
+        (pane) => ({
+          name: `settings-${pane}`,
+          url: pane === 'general' ? 'yalqen://settings/' : `yalqen://settings/${pane}`,
+          preload: 'settings.cjs',
+        }),
+      ),
     ];
 
     for (const scheme of ['light', 'dark']) {

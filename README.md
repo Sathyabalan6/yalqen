@@ -52,6 +52,18 @@ Yalqen currently focuses on macOS. We're looking for contributors to help develo
 
 Interested? [Open an issue](https://github.com/YSamed/yalqen/issues/new) with the platform you'd like to help with and how you can contribute. See the [contributing guide](.github/CONTRIBUTING.md) to get started.
 
+## Linux preview
+
+Build an experimental AppImage from source with Node.js 24:
+
+```bash
+cd apps/browser
+npm ci
+npm run package:linux
+```
+
+The AppImage is written to `apps/browser/release/`. Linux needs working unprivileged user namespaces for Chromium sandboxing; Yalqen refuses to start with `--no-sandbox`. Initial testing covers Ubuntu with GNOME Wayland. Linux packages are not yet published by the release workflow, and automatic updates are not verified on Linux.
+
 ## Install
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/cards/requirements-dark.svg"><img src="assets/readme/cards/requirements-light.svg" alt="Requires macOS 13 or later on Apple Silicon, signed and notarized, updates itself" height="56"></picture>

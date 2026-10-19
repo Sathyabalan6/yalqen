@@ -6,6 +6,7 @@ import { app, BrowserWindow, session } from 'electron';
 import stores from '../../dist/main/privacy/autofill.js';
 import handlers from '../../dist/main/privacy/autofill-handlers.js';
 import passwords from '../../dist/main/privacy/password-handlers.js';
+import passwordStores from '../../dist/main/privacy/passwords.js';
 import settings from '../../dist/main/app/settings.js';
 import ipc from '../../dist/main/app/settings-ipc.js';
 import settingsPage from '../../dist/main/app/settings-page.js';
@@ -28,16 +29,17 @@ async function eventually(predicate) {
   const start = Date.now();
   while (!(await window.webContents.executeJavaScript(predicate))) {
     if (Date.now() - start > 5000) {
-      console.error(await window.webContents.executeJavaScript("document.querySelector('#pane').innerText"));
+      console.error(await window.webContents.executeJavaScript("document.querySelector('#pane')?.innerText"));
       throw Error(`Timed out: ${predicate}`);
     }
     await new Promise((r) => setTimeout(r, 25));
   }
 }
+// Buttons render disabled until the autofill view loads, and a click on a disabled button is dropped.
 async function button(label) {
-  await window.webContents.executeJavaScript(
-    `Array.from(document.querySelector('#pane').querySelectorAll('button')).find(item=>item.textContent.trim()===${JSON.stringify(label)}).click()`,
-  );
+  const find = `Array.from(document.querySelector('#pane')?.querySelectorAll('button') ?? []).find(item=>item.textContent.trim()===${JSON.stringify(label)})`;
+  await eventually(`!!${find} && !${find}.disabled`);
+  await window.webContents.executeJavaScript(`${find}.click()`);
 }
 async function form(values) {
   await window.webContents.executeJavaScript(
@@ -58,6 +60,15 @@ app
         auths++;
         return authenticated;
       },
+    });
+    // Addresses and cards share a settings pane with passwords, as in the app.
+    const passwordStore = new passwordStores.PasswordStore(root, passwords.safeStorageCipher);
+    passwords.installPasswordHandlers({
+      store: passwordStore,
+      savesPasswords: () => false,
+      parentOf: (contents) => windows.find((w) => w.webContents === contents),
+      isSettingsFrame: settingsPage.isSettingsFrame,
+      onChange: () => settingsPage.broadcastPasswords(passwordStore.view()),
     });
     const preferences = new settings.SettingsStore(root),
       view = () => ({
@@ -109,7 +120,7 @@ app
     });
     await window.loadURL('yalqen://settings/autofill');
     await eventually(
-      "Array.from(document.querySelector('#pane').querySelectorAll('button')).some(item=>item.textContent.trim()==='Add address')",
+      "Array.from(document.querySelector('#pane')?.querySelectorAll('button') ?? []).some(item=>item.textContent.trim()==='Add address')",
     );
     await button('Add address');
     await eventually("!!document.getElementById('autofill-givenName')");

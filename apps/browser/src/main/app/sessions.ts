@@ -1,5 +1,6 @@
-import { session, type Session } from 'electron';
+import { nativeTheme, session, type Session } from 'electron';
 import type { PageLanguage } from '../../shared/types.js';
+import { forgetCertificates, rememberCertificates } from '../privacy/certificate-details.js';
 import { rewriteSignInHeaders } from '../privacy/sign-in-headers.js';
 import { setThirdPartyCookieBlocking } from '../privacy/third-party-cookies.js';
 import { acceptLanguages, spellCheckerLanguages } from './page-preferences.js';
@@ -16,7 +17,10 @@ export function openBrowsingSessions(): BrowsingSessions {
     privateBrowsing: session.fromPartition('private'),
     developer: session.fromPartition('developer'),
   };
-  for (const browsing of eachSession(sessions)) rewriteSignInHeaders(browsing);
+  for (const browsing of eachSession(sessions)) {
+    rewriteSignInHeaders(browsing);
+    rememberCertificates(browsing);
+  }
   return sessions;
 }
 
@@ -36,8 +40,9 @@ export function applyCookieBlocking(
   enabled: boolean,
   allowed: (url: string, isPrivate: boolean) => boolean = () => false,
 ): void {
-  setThirdPartyCookieBlocking(daily, enabled, (url) => allowed(url, false));
-  setThirdPartyCookieBlocking(privateBrowsing, enabled, (url) => allowed(url, true));
+  const darkColors = () => nativeTheme.shouldUseDarkColors;
+  setThirdPartyCookieBlocking(daily, enabled, (url) => allowed(url, false), darkColors);
+  setThirdPartyCookieBlocking(privateBrowsing, enabled, (url) => allowed(url, true), darkColors);
   setThirdPartyCookieBlocking(developer, false);
 }
 
@@ -46,4 +51,5 @@ export function forgetSessionData(browsing: Session): void {
   void browsing.clearCache();
   void browsing.clearAuthCache();
   void browsing.closeAllConnections();
+  forgetCertificates(browsing);
 }

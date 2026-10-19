@@ -1,14 +1,4 @@
-import type { FontSizeSetting, PageLanguage } from '../../shared/types.js';
-
-export const FONT_SIZES: Record<FontSizeSetting, number> = { small: 12, medium: 16, large: 20, xlarge: 24 };
-
-export function fontPreferences(setting: FontSizeSetting): {
-  defaultFontSize: number;
-  defaultMonospaceFontSize: number;
-} {
-  const size = FONT_SIZES[setting];
-  return { defaultFontSize: size, defaultMonospaceFontSize: Math.round((size * 13) / 16) };
-}
+import type { PageLanguage } from '../../shared/types.js';
 
 export function acceptLanguages(language: PageLanguage): string {
   return language === 'en' ? 'en-US,en,tr-TR,tr' : 'tr-TR,tr,en-US,en';

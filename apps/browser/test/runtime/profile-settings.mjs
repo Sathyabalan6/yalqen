@@ -104,14 +104,6 @@ app
     await window.loadURL('yalqen://settings/');
     await eventually("document.querySelectorAll('section li').length === 1");
     await window.webContents.executeJavaScript(`(() => {
-      const input = document.getElementById('home-page'); input.focus(); input.value = 'javascript:alert(1)';
-      input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
-    })()`);
-    await eventually("document.getElementById('home-page').getAttribute('aria-invalid') === 'true'");
-    assert.equal(store.get().homePageUrl, null);
-    await window.webContents.executeJavaScript(`(() => {
-      const input = document.getElementById('home-page'); input.value = 'https://home.example/';
-      input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
       Array.from(document.querySelectorAll('[role="option"]')).find(node => node.textContent.trim() === 'Open specific pages').click();
     })()`);
     await eventually("!!document.getElementById('startup-urls')");
@@ -120,9 +112,7 @@ app
       input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
     })()`);
     await eventually("!document.getElementById('startup-urls').matches('[aria-invalid=\"true\"]')");
-    await eventually("document.getElementById('home-page').value === 'https://home.example/'");
     await eventually('(async () => (await window.yalqenSettings.get()).values.startupUrls.length === 2)()');
-    assert.equal(store.get().homePageUrl, 'https://home.example/');
     assert.equal(store.get().startupBehavior, 'pages');
     assert.deepEqual(store.get().startupUrls, ['https://first.example/', 'https://second.example/']);
     await window.webContents.executeJavaScript(`(() => {

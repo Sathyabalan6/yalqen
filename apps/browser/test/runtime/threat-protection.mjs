@@ -143,7 +143,6 @@ app
         developer,
         directory: () => profile,
         askBeforeDownload: () => false,
-        askDownloadLocation: () => false,
         parentOf: () => window,
         onStateChange() {},
         checkFile: (file) => service.checkFile(file),

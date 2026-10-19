@@ -9,7 +9,7 @@
   } from '../../shared/types';
   import { untrack } from 'svelte';
   import { t } from '../../shared/i18n';
-  import { consoleErrorCount, devStates, isNewTab, siteLabel } from './format';
+  import { devStates, isNewTab, siteLabel } from './format';
   import Capsule from './Capsule.svelte';
   import Icon from '../ui/Icon.svelte';
   import NewTabButton from './NewTabButton.svelte';
@@ -275,16 +275,14 @@
           {#if active}
             <div class="pill">
               {#if tab.security !== 'local'}
-                <Button
+                <IconButton
                   size="sm"
-                  icon={tab.security === 'secure' ? 'lock' : tab.security === 'dangerous' ? 'warning' : 'info'}
+                  icon="lock"
                   class={['site', tab.security]}
+                  label={tab.security === 'secure' ? t('toolbar.siteInfoSecure') : t('toolbar.siteInfoNotSecure')}
                   title={t('toolbar.siteInfo')}
-                  aria-label={tab.security === 'secure' ? t('toolbar.siteInfoSecure') : t('toolbar.siteInfoNotSecure')}
                   onclick={() => send({ type: 'open-site-info' })}
-                >
-                  {#if tab.security === 'insecure' || tab.security === 'dangerous'}{t('toolbar.notSecure')}{/if}
-                </Button>
+                />
               {/if}
               {#if developer}
                 <span class="private-badge developer" title={t('toolbar.developerWindow')}>
@@ -368,10 +366,9 @@
                       <Button
                         size="sm"
                         variant="tonal"
-                        icon={activeTab.consoleErrors > 0 ? 'warning' : 'gauge'}
+                        icon="gauge"
                         class={[
                           'dev-state',
-                          activeTab.consoleErrors > 0 && 'has-errors',
                           activeTab.agentObserved && 'agent',
                           activeTab.agentReadAt !== null && Date.now() - activeTab.agentReadAt < 1500 && 'agent-read',
                         ]}
@@ -379,7 +376,7 @@
                         title={states.join(' · ')}
                         onclick={() => send({ type: 'open-dev-menu' })}
                       >
-                        {activeTab.consoleErrors > 0 ? consoleErrorCount(activeTab) : states.length}
+                        {states.length}
                       </Button>
                     {/key}
                   {/if}
@@ -678,7 +675,6 @@
 
   .chip :global(.site.dangerous) {
     color: #d93025;
-    font-weight: 600;
   }
 
   .tab-group :global(.star[aria-pressed='true'] path) {
@@ -692,10 +688,6 @@
   .tab-group :global(.dev-state) {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
-  }
-
-  .tab-group :global(.dev-state.has-errors) {
-    color: var(--warn);
   }
 
   .tab-group :global(.dev-state.agent) {

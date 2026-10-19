@@ -38,11 +38,17 @@ import { AgentTokenStore } from './agent-bridge/token-store.js';
 import { benchPlanFromEnv, prepareBenchApp, runBench } from './bench/bench-driver.js';
 import { BookmarkStore, runBookmarksCommand } from './library/bookmarks.js';
 import {
+  chromiumProfiles,
+  firefoxProfiles,
   importBookmarkFile,
   importChromiumHistory,
   importFirefoxHistory,
   isFirefoxPlaces,
 } from './library/browser-import.js';
+import { WelcomeCard } from './window/welcome-card.js';
+import { appearancePatch, invitationSources, invitationTabs } from './app/invitation.js';
+import { setPageAccent } from './pages/responses.js';
+import { accentHex } from '../shared/accent.js';
 import { CertificateExceptions, handleCertificateErrors } from './privacy/certificates.js';
 import { clearSince } from './library/clear-data.js';
 import { CommandBar } from './address-bar/command-bar.js';
@@ -55,6 +61,7 @@ import { registerExtensionsIpc } from './extensions/extensions-ipc.js';
 import { registerWebStoreApi } from './extensions/web-store-api.js';
 import { loadInternalPages, registerInternalScheme, serveInternalPages } from './pages/internal-pages.js';
 import { HistoryStore } from './library/history.js';
+import { siteIcons } from './library/site-icons.js';
 import { RepoPrompt } from './app/repo-prompt.js';
 import { HttpsOnly, hostResolverOptions } from './privacy/https-only.js';
 import { chromeUserAgent } from './app/page-preferences.js';
@@ -68,6 +75,7 @@ import { installPasswordHandlers, safeStorageCipher } from './privacy/password-h
 import { PasswordStore } from './privacy/passwords.js';
 import { AutofillStore } from './privacy/autofill.js';
 import { installAutofillHandlers } from './privacy/autofill-handlers.js';
+import { installOneTimeCodeHandlers } from './privacy/one-time-code-handlers.js';
 import { StorageOrigins, SiteStorageManager } from './privacy/site-storage.js';
 import { installSiteStorageHandlers, observeStorageOrigins } from './privacy/site-storage-handlers.js';
 import { ReadingListStore, saveReadingPage } from './library/reading-list.js';
@@ -108,10 +116,16 @@ import { isDefaultBrowser } from './app/default-browser.js';
 import { EMPTY_HISTORY_INDEX, suggest } from './address-bar/suggestions.js';
 import { appIconPath, preloadPath, rendererPath } from './app/paths.js';
 import { Updater, loadAutoUpdater } from './app/updater.js';
-import { UsageReporter, USAGE_ENDPOINT } from './app/usage.js';
+import { LETTER_ENDPOINT, sendLetterCount, UsageReporter, USAGE_ENDPOINT } from './app/usage.js';
 import { ChatPreferenceStore } from './agent-bridge/chat-preferences.js';
-import { YalqenWindow, type AppContext, type WindowOptions } from './window/window.js';
+import { YalqenWindow, glassAtLaunch, type AppContext, type WindowOptions } from './window/window.js';
 import { ZoomStore } from './tabs/zoom.js';
+
+// AppImage launchers can silently add this flag when user namespaces are unavailable.
+if (process.platform === 'linux' && app.commandLine.hasSwitch('no-sandbox')) {
+  console.error('Yalqen requires the Chromium sandbox. Enable unprivileged user namespaces to run the AppImage.');
+  app.exit(1);
+}
 
 const COMMAND_BAR_PREWARM_MS = 5000;
 
@@ -143,6 +157,8 @@ const externalUrls = new ExternalUrlInbox(primary);
 // Chromium reads its locale switch once at startup, before the app is ready.
 const chosenLanguage = new SettingsStore(app.getPath('userData')).get().interfaceLanguage;
 if (chosenLanguage !== 'system') app.commandLine.appendSwitch('lang', chosenLanguage);
+// Chromium keeps one renderer process warm, so a new tab or a new site does not wait for a launch.
+app.commandLine.appendSwitch('enable-features', 'SpareRendererForSitePerProcess');
 
 function startBrowser(): void {
   const userData = app.getPath('userData');
@@ -335,6 +351,21 @@ function startBrowser(): void {
     parentOf: (contents) => windows.find((window) => window.tabs.hasContents(contents))?.window,
     changed: () => broadcastAutofill(autofill.view()),
   });
+  installOneTimeCodeHandlers({
+    allowed: (contents) =>
+      contents.session === daily &&
+      !certificates.hasException(contents.getURL()) &&
+      windows.some((window) => !window.isPrivate && !window.isDeveloper && window.tabs.activeContents() === contents),
+    mailTabs: () =>
+      webContents
+        .getAllWebContents()
+        .filter(
+          (contents) =>
+            contents.session === daily &&
+            windows.some((window) => !window.isPrivate && !window.isDeveloper && window.tabs.hasContents(contents)),
+        ),
+    parentOf: (contents) => windows.find((window) => window.tabs.hasContents(contents))?.window,
+  });
 
   const bookmarksChanged = () => {
     pushState();
@@ -348,7 +379,6 @@ function startBrowser(): void {
     developer,
     directory: () => settings.get().downloadDirectory ?? app.getPath('downloads'),
     askBeforeDownload: () => settings.get().askBeforeDownload,
-    askDownloadLocation: () => settings.get().askDownloadLocation,
     parentOf: (contents) => windowOf(contents)?.window,
     onStateChange: pushState,
     checkFile: (file) => threatLists.checkFile(file),
@@ -471,6 +501,11 @@ function startBrowser(): void {
     preload: preloadPath('find-preload'),
     page: rendererPath('find.html'),
   });
+  const welcome = new WelcomeCard({
+    preload: preloadPath('welcome-preload'),
+    page: rendererPath('welcome.html'),
+  });
+  setPageAccent(accentHex(settings.get().accentColor));
   nativeTheme.themeSource = settings.get().theme;
   let deviceId = DEFAULT_DEVICE_ID;
 
@@ -507,7 +542,8 @@ function startBrowser(): void {
     if (next.defaultZoom !== previous.defaultZoom) eachWindow((window) => window.tabs.applyDefaultZoom());
     if (next.secureDns !== previous.secureDns) app.configureHostResolver(hostResolverOptions(next.secureDns));
     nativeTheme.themeSource = next.theme;
-    if (next.freezeBackgroundTabs !== previous.freezeBackgroundTabs)
+    if (next.accentColor !== previous.accentColor) setPageAccent(accentHex(next.accentColor));
+    if (next.discardAfterMinutes > 0 !== previous.discardAfterMinutes > 0)
       eachWindow((window) => window.tabs.applyFreezeSetting());
     if (next.autoUpdate !== previous.autoUpdate) updater.schedule();
     if (next.autoUpdateExtensions !== previous.autoUpdateExtensions && !bench) extensions.scheduleUpdates();
@@ -538,6 +574,7 @@ function startBrowser(): void {
     siteProtections,
     commandBar,
     findBar,
+    welcome,
     history,
     repoPrompt,
     dismissAnnouncement: () => settings.update({ dismissedAnnouncement: app.getVersion() }),
@@ -681,6 +718,7 @@ function startBrowser(): void {
       showAnnouncement: () => !isPrivate && settings.get().dismissedAnnouncement !== app.getVersion(),
       showFeedback: () => !isPrivate && settings.get().dismissedFeedback !== app.getVersion(),
       showRepoPrompt: () => !isPrivate && repoPrompt.take(),
+      opaque: () => !glassAtLaunch(settings),
       suggestions: (query) =>
         suggest(query, {
           tabs: [],
@@ -915,6 +953,7 @@ function startBrowser(): void {
     },
     requestRules,
     permissions,
+    siteIcons: (domains) => siteIcons(history.list(), domains),
     onRequestRulesSaved: () => eachWindow((window) => window.tabs.refreshRequestRules()),
   });
 
@@ -947,6 +986,7 @@ function startBrowser(): void {
     threatLists.stop();
     commandBar.destroy();
     findBar.destroy();
+    welcome.destroy();
     extensionPopup.close();
     extensions.stopUpdates();
     extensions.saveNow();
@@ -1012,12 +1052,100 @@ function startBrowser(): void {
     );
     if (restoring && restored.length > 0 && first) openExternal([first, ...rest]);
     else if (rest.length > 0) openExternal(rest);
+    showLetter();
+  };
+
+  let countingLetter = false;
+  const countLetter = () => {
+    const { letterSeen, letterCounted } = settings.get();
+    if (!app.isPackaged || bench || !letterSeen || letterCounted || countingLetter) return;
+    countingLetter = true;
+    void sendLetterCount(LETTER_ENDPOINT).then((counted) => {
+      countingLetter = false;
+      if (counted) settings.update({ letterCounted: true });
+    });
+  };
+
+  // Everyone gets the sealed thank-you letter once, before the invitation when both are due.
+  const showLetter = () => {
+    const window = current;
+    if (bench || settings.get().letterSeen || !window || window.isPrivate || window.isDeveloper || window.webApp) {
+      showInvitation();
+      return;
+    }
+    const values = settings.get();
+    welcome.show(
+      {
+        window: window.window,
+        open: {
+          name: values.displayName,
+          accent: values.accentColor,
+          theme: values.theme,
+          tabs: invitationTabs(values),
+          material: glassAtLaunch(settings) ? 'glass' : 'opaque',
+          sources: [],
+        },
+        onAction: () => {},
+        importFrom: async () => ({ ok: false, bookmarks: 0, visits: 0 }),
+        onFinish: () => {
+          settings.update({ letterSeen: true });
+          countLetter();
+          window.focus();
+          showInvitation();
+        },
+      },
+      rendererPath('letter.html'),
+    );
+  };
+
+  // Everyone sees the thank-you invitation once, including people who installed before it existed.
+  const showInvitation = () => {
+    const window = current;
+    if (bench || settings.get().invitationSeen || !window || window.isPrivate || window.isDeveloper || window.webApp)
+      return;
+    const sources = invitationSources([...chromiumProfiles('Bookmarks'), ...firefoxProfiles()]);
+    const values = settings.get();
+    welcome.show({
+      window: window.window,
+      open: {
+        name: values.displayName,
+        accent: values.accentColor,
+        theme: values.theme,
+        tabs: invitationTabs(values),
+        material: glassAtLaunch(settings) ? 'glass' : 'opaque',
+        sources: sources.map(({ id, browser, profile }) => ({ id, browser, profile })),
+      },
+      onAction: (action) => {
+        if (action.type === 'appearance') updateSettings(appearancePatch(action));
+        else if (action.type === 'name' && typeof action.name === 'string')
+          updateSettings({ displayName: action.name });
+      },
+      importFrom: async (request) => {
+        const source = sources.find((item) => item.id === request.source);
+        if (!source) return { ok: false, bookmarks: 0, visits: 0 };
+        try {
+          const bookmarks =
+            request.bookmarks === true ? (await context.importBookmarks(source.bookmarks)).bookmarks : 0;
+          const visits =
+            request.history === true && source.history ? (await context.importHistory(source.history)).visits : 0;
+          return { ok: true, bookmarks, visits };
+        } catch (error) {
+          console.warn('[invitation] could not import:', error);
+          return { ok: false, bookmarks: 0, visits: 0 };
+        }
+      },
+      onFinish: () => {
+        settings.update({ invitationSeen: true });
+        window.focus();
+      },
+    });
   };
   void extensions.loadAll().then(() => {
     bench?.mark('extensions-loaded');
     if (!bench) extensions.scheduleUpdates();
     openInitialWindows();
     usage.schedule();
+    countLetter();
     void agentBridge.sync();
     prewarmCommandBar();
     if (!bench) return;
@@ -1046,7 +1174,7 @@ if (!primary) {
 } else {
   app.whenReady().then(() => {
     bench?.mark('app-ready');
-    app.dock?.setIcon(appIcon);
+    if (!app.isPackaged) app.dock?.setIcon(appIcon);
     startBrowser();
   });
 }

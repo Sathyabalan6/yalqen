@@ -43,7 +43,7 @@ export function installAppMenu(host: AppMenuHost): void {
       newPrivateTab: inWindow((window) => window.tabs.open(NEW_TAB_URL, { isPrivate: true })),
       closeTab: () => {
         const window = current();
-        if (window?.webApp && window.tabs.count === 1) {
+        if (window && window.tabs.count === 1) {
           window.close();
           return;
         }
@@ -80,8 +80,12 @@ export function installAppMenu(host: AppMenuHost): void {
         });
       },
       zoom: (direction) => current()?.tabs.zoom(direction),
-      togglePanel: () => updateSettings({ panelCollapsed: !settings.get().panelCollapsed }),
-      toggleSidebar: () => updateSettings({ sidebarVisible: !settings.get().sidebarVisible }),
+      cyclePanel: () => {
+        const { sidebarVisible, panelCollapsed } = settings.get();
+        if (!sidebarVisible) updateSettings({ sidebarVisible: true, panelCollapsed: false });
+        else if (panelCollapsed) updateSettings({ sidebarVisible: false });
+        else updateSettings({ panelCollapsed: true });
+      },
       toggleAgentPanel: () => current()?.toggleAgentPanel(),
       toggleToolbar: () => updateSettings({ toolbarVisible: !settings.get().toolbarVisible }),
       toggleDevTools: () => current()?.tabs.toggleDevTools(),

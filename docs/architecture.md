@@ -12,7 +12,9 @@ Yalqen is an Electron app in `apps/browser`. This page maps the source tree so a
 | Settings page    | `src/renderer/settings`                             | Svelte page served at `yalqen://settings`                                                    |
 | Web pages        | `src/preload/page-preload.ts`                       | Sandboxed preload for every tab: gestures, password autofill, settings and web store bridges |
 
-The main process pushes a complete `BrowserState` to each window interface as a JSON string, which crosses the context bridge without the deep copy an object would need. `src/shared/browser-state.ts` keeps unchanged tabs and arrays stable on arrival, and `App.svelte` splits the state into one signal per field, so a title or download update only re-renders what changed.
+The main process pushes a complete `BrowserState` to each window interface as a JSON string, which crosses the context bridge without the deep copy an object would need. `src/shared/browser-state.ts` keeps unchanged tabs and arrays stable on arrival, and `App.svelte` splits the state into one signal per field, so a title or download update only re-renders what changed. The agent chat sends its transcript the same way, and `src/shared/chat-snapshot.ts` keeps the unchanged messages, so a streamed reply re-renders only its own text.
+
+`YalqenWindow` starts loading the window interface before it creates the native window, and the interface reports its layout before it renders the tab rows. The window is shown once the interface has drawn that layout: a page in a hidden window does not draw, so background throttling is off for the interface until then.
 
 ## Main process
 
@@ -53,7 +55,7 @@ Tests in `apps/browser/test` mirror the source tree (`test/main/library/history.
 
 ## Shared styles
 
-`src/renderer/public/tokens.css` holds the colors shared by the window interface, the settings page, the internal `yalqen://` pages and error pages, with `light-dark()` choosing the light or dark value. `app.css` imports it, the main process inlines it with `controls.css` into internal pages through the `__YALQEN_STYLES_SLOT__` marker (their CSP allows only inline styles), and error pages receive it as their `theme`. A page keeps a local value only where it differs on purpose, such as the stronger dark border on the history, bookmarks and downloads pages, or the new tab's glass palette.
+`src/renderer/public/tokens.css` holds the colors shared by the window interface, the settings page, the internal `yalqen://` pages and error pages, with `light-dark()` choosing the light or dark value. `app.css` imports it, the main process inlines it with `controls.css` into internal pages through the `__YALQEN_STYLES_SLOT__` marker (their CSP allows only inline styles), and error pages receive it as their `theme`. A page keeps a local value only where it differs on purpose, such as the stronger dark border on the history, bookmarks and downloads pages, or the new tab's glass palette. On a glass window the interface sets `--glass-tint` from the Glass tint setting, and `--chrome-base` takes its alpha from it.
 
 After a styling change, `node scripts/capture-ui.mjs --out <dir>` records the computed colors, borders and shadows of every element on each surface in light and dark, and `--compare <before> <after>` lists what changed.
 

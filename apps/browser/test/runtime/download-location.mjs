@@ -35,16 +35,13 @@ app
         privateBrowsing: session.fromPartition('private-download-test'),
         developer: session.fromPartition('developer-download-test'),
         directory: () => profile,
-        askBeforeDownload: () => false,
-        askDownloadLocation: () => true,
+        askBeforeDownload: () => true,
         parentOf: () => undefined,
         onStateChange: () => {},
       },
       {
         showSaveDialog: async () => ({ canceled: false, filePath: destination }),
-        showMessageBox: async () => {
-          throw new Error('the save chooser should be the only prompt');
-        },
+        showMessageBox: async () => ({ response: 1 }),
       },
     );
     session.fromPartition('download-test').downloadURL('data:application/octet-stream,download%20location%20test');

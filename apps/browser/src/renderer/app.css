@@ -2,18 +2,18 @@
 @import './public/controls.css';
 
 :root {
-  --surface-strong: #f6f7f8;
+  --surface-strong: #f7f7f8;
   --surface-menu: var(--surface-strong);
-  --well: #dcdfe3;
+  --well: #e2e2e6;
   --focus: var(--accent);
   --on-accent: #ffffff;
   --profile-developer: #7c6cf2;
-  --shadow: 0 0 0 0.5px rgb(16 18 24 / 0.06), 0 1px 3px rgb(16 18 24 / 0.08);
+  --shadow: 0 0 0 0.5px rgb(16 18 24 / 0.1), 0 1px 2px rgb(16 18 24 / 0.06);
   --window: var(--bg);
   --chrome-base: var(--bg);
-  --page-shadow: 0 0 0 0.5px rgb(16 18 24 / 0.06), 0 2px 10px rgb(16 18 24 / 0.05);
+  --page-shadow: 0 0 0 0.5px rgb(16 18 24 / 0.09), 0 4px 16px rgb(16 18 24 / 0.06);
   --page-divider: rgb(16 18 24 / 0.06);
-  --page-empty: #f3f4f6;
+  --page-empty: #f6f6f7;
   --badge: var(--bg);
   --rim: none;
 
@@ -30,12 +30,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-material='glass']) {
-    --surface-strong: #2d2f34;
-    --well: #1e2023;
-    --shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 1px 3px rgb(0 0 0 / 0.3);
-    --page-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 2px 10px rgb(0 0 0 / 0.3);
+    --surface-strong: #232327;
+    --well: #141416;
+    --shadow: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 1px 3px rgb(0 0 0 / 0.4);
+    --page-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.09), 0 4px 16px rgb(0 0 0 / 0.5);
     --page-divider: rgb(255 255 255 / 0.06);
-    --page-empty: #1b1c1f;
+    --page-empty: #0e0e10;
     color-scheme: dark;
   }
 }
@@ -44,9 +44,10 @@
   --window: transparent;
   --warn: #a34a06;
   --bg: transparent;
-  --chrome-base: rgb(250 247 243 / 0.38);
-  --surface: rgb(255 255 255 / 0.76);
-  --surface-strong: rgb(255 255 255 / 0.95);
+  /* The interface sets --glass-tint from the setting; the factors keep 0.22 and 0.32 at its default. */
+  --chrome-base: rgb(250 247 243 / calc(var(--glass-tint, 0.25) * 0.88));
+  --surface: rgb(255 255 255 / 0.55);
+  --surface-strong: rgb(255 255 255 / 0.82);
   /* Menus float over text, so a see-through glass fill would mix the two. */
   --surface-menu: #fbfaf8;
   --surface-hover: rgb(16 18 24 / 0.06);
@@ -64,9 +65,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root[data-material='glass'] {
-    --chrome-base: rgb(27 24 24 / 0.5);
-    --surface: rgb(255 255 255 / 0.12);
-    --surface-strong: rgb(255 255 255 / 0.18);
+    --chrome-base: rgb(27 24 24 / min(0.96, calc(var(--glass-tint, 0.25) * 1.28)));
+    --surface: rgb(255 255 255 / 0.08);
+    --surface-strong: rgb(255 255 255 / 0.13);
     --surface-menu: #2a2c30;
     --surface-hover: rgb(255 255 255 / 0.07);
     --well: rgb(0 0 0 / 0.17);
@@ -108,7 +109,7 @@
     radial-gradient(60% 60% at 50% 50%, rgb(255 150 170 / 0.3), transparent 70%),
     radial-gradient(80% 70% at 0% 100%, rgb(150 160 255 / 0.55), transparent 70%),
     linear-gradient(160deg, #fbe9d7, #e6e4f6);
-  --chrome-base: rgb(255 255 255 / 0.18);
+  --chrome-base: rgb(255 255 255 / 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -118,7 +119,7 @@
       radial-gradient(60% 60% at 55% 45%, rgb(190 70 120 / 0.3), transparent 70%),
       radial-gradient(80% 70% at 0% 100%, rgb(96 76 220 / 0.6), transparent 70%),
       linear-gradient(160deg, #2a1d2e, #141228);
-    --chrome-base: rgb(16 14 20 / 0.28);
+    --chrome-base: rgb(16 14 20 / 0.18);
   }
 }
 

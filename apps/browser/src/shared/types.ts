@@ -15,7 +15,6 @@ export type SearchEngineId =
   'google' | 'yandex' | 'duckduckgo' | 'bing' | 'brave' | 'ecosia' | 'startpage' | 'kagi' | 'custom';
 export type ThemeSource = 'system' | 'light' | 'dark';
 export type SecureDnsSetting = 'off' | 'automatic' | 'cloudflare' | 'google' | 'quad9';
-export type FontSizeSetting = 'small' | 'medium' | 'large' | 'xlarge';
 export type PageLanguage = 'tr' | 'en';
 export type InterfaceLanguage = 'system' | 'tr' | 'en';
 export type SecurityState = 'secure' | 'insecure' | 'dangerous' | 'local';
@@ -40,7 +39,6 @@ export interface TabSnapshot {
   isPrivate: boolean;
   bookmarked: boolean;
   blockedPopups: number;
-  consoleErrors: number;
   overrides: PageOverrides;
   translation: TabTranslation;
   autoReloadSeconds: number | null;
@@ -104,6 +102,9 @@ export type ToolbarButtonId = (typeof TOOLBAR_BUTTON_IDS)[number];
 export const REQUIRED_TOOLBAR_BUTTON: ToolbarButtonId = 'settings';
 
 export const DEFAULT_ZOOM_FACTORS = [0.8, 0.9, 1, 1.1, 1.25, 1.5] as const;
+
+// How strongly the glass window is tinted, in percent: 0 leaves the bare glass, 100 is almost solid.
+export const DEFAULT_GLASS_TINT = 25;
 export const DISCARD_AFTER_MINUTES = [0, 15, 30, 60, 120] as const;
 
 export interface BrowserState {
@@ -120,10 +121,14 @@ export interface BrowserState {
   panelSide: PanelSide;
   pinnedDisplay: PinnedDisplay;
   sidebarVisible: boolean;
+  // Filled only while the sidebar media player is on and a tab has played sound.
+  media: import('./sidebar-widgets').MediaInfo | null;
   toolbarVisible: boolean;
   toolbarTabs: boolean;
   toolbarButtons: ToolbarButtonId[];
   material: WindowMaterial;
+  glassTint: number;
+  accent: string;
   device: DeviceFrame | null;
   zoom: number;
   defaultZoom: number;
@@ -381,6 +386,9 @@ export type UiAction =
   | { type: 'discard-tab'; id: TabId }
   | { type: 'toggle-pin'; id: TabId }
   | { type: 'toggle-mute'; id: TabId }
+  | { type: 'toggle-media'; id: TabId }
+  | { type: 'seek-media'; id: TabId; seconds: number }
+  | { type: 'skip-media'; id: TabId; direction: import('./sidebar-widgets').MediaSkip }
   | { type: 'open-tab-menu'; id: TabId }
   | { type: 'move-tab'; id: TabId; toIndex: number }
   | { type: 'navigate'; input: string }
@@ -423,6 +431,8 @@ export const PageChannel = {
   chooseSavedLogin: 'yalqen:choose-saved-login',
   autofillAvailable: 'yalqen:autofill-available',
   chooseAutofill: 'yalqen:choose-autofill',
+  oneTimeCodeAvailable: 'yalqen:one-time-code-available',
+  chooseOneTimeCode: 'yalqen:choose-one-time-code',
 } as const;
 
 export interface SubmittedCredential {
@@ -555,6 +565,8 @@ export interface CommandBarOpen {
   placeholder: string;
   mode: 'navigate' | 'new-tab';
   value?: string;
+  material: WindowMaterial;
+  accent: string;
 }
 
 export const NETWORK_PRESETS = ['offline', 'slow-3g', 'fast-3g', 'fast-4g'] as const;
@@ -656,6 +668,53 @@ export interface CommandBarApi {
   send(action: CommandBarAction): void;
 }
 
+export type WelcomeTabs = 'left' | 'top';
+
+// Browsers found on this Mac that the invitation can import from; `id` indexes the list main keeps.
+export interface WelcomeImportSource {
+  id: number;
+  browser: string;
+  profile: string;
+}
+
+export interface WelcomeOpen {
+  name: string;
+  accent: import('./accent').AccentColorId;
+  theme: ThemeSource;
+  tabs: WelcomeTabs;
+  material: WindowMaterial;
+  sources: WelcomeImportSource[];
+}
+
+export type WelcomeAction =
+  | { type: 'appearance'; accent?: import('./accent').AccentColorId; theme?: ThemeSource; tabs?: WelcomeTabs }
+  | { type: 'name'; name: string }
+  | { type: 'finish' };
+
+export interface WelcomeImportRequest {
+  source: number;
+  bookmarks: boolean;
+  history: boolean;
+}
+
+export interface WelcomeImportResult {
+  ok: boolean;
+  bookmarks: number;
+  visits: number;
+}
+
+export const WelcomeChannel = {
+  open: 'yalqen-welcome:open',
+  action: 'yalqen-welcome:action',
+  import: 'yalqen-welcome:import',
+} as const;
+
+export interface WelcomeApi {
+  onOpen(listener: (open: WelcomeOpen) => void): () => void;
+  send(action: WelcomeAction): void;
+  importFrom(request: WelcomeImportRequest): Promise<WelcomeImportResult>;
+}
+
 export interface FindResult {
   active: number;
   matches: number;
@@ -679,17 +738,17 @@ export interface SettingsValues {
   searchEngine: SearchEngineId;
   customSearchTemplate: string | null;
   theme: ThemeSource;
+  transparency: boolean;
+  glassTint: number;
   startupBehavior: 'restore' | 'new-tab' | 'pages';
-  homePageUrl: string | null;
   startupUrls: string[];
   panelCollapsed: boolean;
   panelSide: PanelSide;
   pinnedDisplay: PinnedDisplay;
   sidebarVisible: boolean;
+  sidebarWidgets: import('./sidebar-widgets').SidebarWidgetId[];
   toolbarVisible: boolean;
-  toolbarTabs: boolean;
   toolbarButtons: ToolbarButtonId[];
-  freezeBackgroundTabs: boolean;
   discardAfterMinutes: number;
   adBlocking: boolean;
   threatProtection: boolean;
@@ -698,7 +757,6 @@ export interface SettingsValues {
   httpsOnly: boolean;
   blockThirdPartyCookies: boolean;
   secureDns: SecureDnsSetting;
-  fontSize: FontSizeSetting;
   defaultZoom: number;
   interfaceLanguage: InterfaceLanguage;
   pageTranslation: boolean;
@@ -706,9 +764,16 @@ export interface SettingsValues {
   autoUpdateExtensions: boolean;
   usageCounting: boolean;
   askBeforeDownload: boolean;
-  askDownloadLocation: boolean;
   downloadDirectory: string | null;
   welcomeCompleted: boolean;
+  // The thank-you invitation shown once on first launch, and once to people who installed before it existed.
+  invitationSeen: boolean;
+  // The sealed thank-you letter, shown once to every user, new or existing.
+  letterSeen: boolean;
+  // Whether the anonymous one-time letter count reached the server; retried on later launches until it does.
+  letterCounted: boolean;
+  displayName: string;
+  accentColor: import('./accent').AccentColorId;
   dismissedAnnouncement: string;
   dismissedFeedback: string;
   dismissedUpdate: string;
@@ -790,6 +855,7 @@ export const SettingsChannel = {
   updateThreatLists: 'yalqen-settings:update-threat-lists',
   profiles: 'yalqen-settings:profiles',
   profileAction: 'yalqen-settings:profile-action',
+  siteIcons: 'yalqen-settings:site-icons',
 } as const;
 
 export type ProcessGroupKind = 'pages' | 'interface' | 'extensions' | 'browser' | 'gpu' | 'utility' | 'other';
@@ -998,6 +1064,7 @@ export interface SettingsApi {
     decision: PermissionDecision | null,
   ): Promise<SitePermissionsView>;
   forgetSitePermissions(origin: string): Promise<SitePermissionsView>;
+  siteIcons(domains: string[]): Promise<Record<string, string>>;
   openSystemSettings(device: SystemDevice): Promise<void>;
   extensions(): Promise<ExtensionInfo[]>;
   checkExtensionUpdates(): Promise<string | null>;

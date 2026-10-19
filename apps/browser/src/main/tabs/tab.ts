@@ -24,8 +24,8 @@ export interface Tab {
   activatedAt: number;
   inactiveSince: number;
   edited: boolean;
+  interacted: boolean;
   blockedPopups: string[];
-  consoleErrors: number;
   overrides: PageOverrides;
   autoReload: { seconds: number; dueAt: number } | null;
   pageLanguage: string | null;
@@ -33,14 +33,14 @@ export interface Tab {
   translationRun: number;
   loading: boolean;
   frozen: boolean;
+  playingMedia: number;
+  soundAt: number;
   history: SavedHistory | null;
   emulation: Emulation | null;
   visitId: string | null;
   openerId: TabId | null;
   agent: TabRuntime | null;
   agentReadAt: number | null;
-  certificateLoading: boolean;
-  preparing: boolean;
 }
 
 export interface RecentPage {
@@ -66,8 +66,8 @@ export function createTab(saved: Partial<SavedTab> & { url: string }, isPrivate 
     activatedAt: 0,
     inactiveSince: Date.now(),
     edited: false,
+    interacted: false,
     blockedPopups: [],
-    consoleErrors: 0,
     overrides: NO_OVERRIDES,
     autoReload: null,
     pageLanguage: null,
@@ -75,21 +75,20 @@ export function createTab(saved: Partial<SavedTab> & { url: string }, isPrivate 
     translationRun: 0,
     loading: false,
     frozen: false,
+    playingMedia: 0,
+    soundAt: 0,
     history: saved.history ?? null,
     emulation: null,
     visitId: null,
     openerId: null,
     agent: null,
     agentReadAt: null,
-    certificateLoading: false,
-    preparing: false,
   };
 }
 
 export function savedTab(tab: Tab): SavedTab {
   const navigation = tab.view?.webContents.navigationHistory;
-  const history =
-    navigation && !tab.preparing ? captureSavedHistory(navigation) : tab.history && trimHistory(tab.history);
+  const history = navigation ? captureSavedHistory(navigation) : tab.history && trimHistory(tab.history);
   return {
     id: tab.id,
     url: tab.url,
@@ -108,7 +107,7 @@ export function liveContents(tab: Tab | undefined): Electron.WebContents | null 
 
 export function captureHistory(tab: Tab): SavedHistory | null {
   const history = tab.view?.webContents.navigationHistory;
-  if (!history || tab.preparing) return tab.history;
+  if (!history) return tab.history;
   const entries = history.getAllEntries();
   return entries.length > 0 ? { entries, index: history.getActiveIndex() } : tab.history;
 }

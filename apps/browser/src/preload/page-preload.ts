@@ -37,6 +37,7 @@ import { selectLogin } from '../shared/login-selection.js';
 import { setupGoogleSignInPage } from './google-sign-in.js';
 import { setupWebStorePage } from './web-store.js';
 import { setupAutofill } from './autofill.js';
+import { setupMediaSession } from './media-session.js';
 import { SiteStorageChannel } from '../shared/site-storage.js';
 import { READING_LIST_URL, ReadingListChannel, type ReadingListApi } from '../shared/reading-list.js';
 import { WORKSPACES_URL, WorkspaceChannel, type WorkspaceApi } from '../shared/workspaces.js';
@@ -192,6 +193,8 @@ if (location.href.startsWith(SETTINGS_URL) && window === window.top) {
       ipcRenderer.invoke(SitePermissionsChannel.set, origin, kind, decision) as Promise<SitePermissionsView>,
     forgetSitePermissions: (origin: string) =>
       ipcRenderer.invoke(SitePermissionsChannel.forget, origin) as Promise<SitePermissionsView>,
+    siteIcons: (domains: string[]) =>
+      ipcRenderer.invoke(settingsChannel.siteIcons, domains) as Promise<Record<string, string>>,
     openSystemSettings: (device) =>
       ipcRenderer.invoke(SitePermissionsChannel.openSystemSettings, device) as Promise<void>,
     extensions: () => ipcRenderer.invoke(ExtensionsChannel.list) as Promise<ExtensionInfo[]>,
@@ -514,6 +517,7 @@ async function fillLogin(target?: HTMLInputElement): Promise<void> {
 }
 
 if (window === window.top && (location.protocol === 'https:' || location.protocol === 'http:')) {
+  setupMediaSession();
   let fillTimer = 0;
   const scheduleFill = () => {
     if (fillTimer) return;

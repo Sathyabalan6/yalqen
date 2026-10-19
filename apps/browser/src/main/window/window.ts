@@ -33,6 +33,7 @@ import type { BookmarkStore } from '../library/bookmarks.js';
 import type { BookmarkImportResult, HistoryImportResult } from '../library/browser-import.js';
 import type { CertificateExceptions } from '../privacy/certificates.js';
 import type { CommandBar, CommandBarHost } from '../address-bar/command-bar.js';
+import type { WelcomeCard } from './welcome-card.js';
 import { contextMenuTemplate } from './context-menu.js';
 import {
   autoReloadSeconds,
@@ -58,7 +59,6 @@ import type { ActionWindow } from '../agent-bridge/action-runner.js';
 import type { Verification } from '../agent-bridge/verification.js';
 import { formatLocation } from '../agent-bridge/component-source.js';
 import { pageFrame } from './page-layout.js';
-import { fontPreferences } from '../app/page-preferences.js';
 import { permissionOrigin, type PermissionStore } from '../privacy/permissions.js';
 import type { PersistChange, SavedTab, SavedWindow } from '../tabs/persistence.js';
 import { blockedPopupsTemplate } from '../tabs/popups.js';
@@ -99,13 +99,34 @@ import { captureVisualPage } from './visual-capture.js';
 import { ResponsiveScanManager, ResponsiveScanError, createResponsiveScanSession } from './responsive-scan.js';
 import { acquirePageWork, pageWorkBusy } from '../tabs/page-work.js';
 import { readingUrl } from '../../shared/reading-list.js';
+import { startupPages } from '../../shared/startup-pages.js';
 import type { WebAppInfo } from '../../shared/web-apps.js';
+import { accentHex } from '../../shared/accent.js';
 
 const WINDOW_CONTROLS_INSET = { x: 16, y: 15 };
 const CASCADE_OFFSET = 24;
 const REVEAL_FALLBACK_MS = 1000;
+const FIRST_PAINT_WAIT_MS = 200;
+// Resolves when the page has drawn, or after a short wait where a hidden page reports no paint.
+const FIRST_PAINT_SCRIPT = `new Promise((resolve) => {
+  if (performance.getEntriesByType('paint').length > 0) return resolve();
+  new PerformanceObserver((_list, observer) => {
+    observer.disconnect();
+    resolve();
+  }).observe({ type: 'paint', buffered: true });
+  setTimeout(resolve, ${FIRST_PAINT_WAIT_MS});
+})`;
+const WALLPAPER_PRELOAD_DELAY_MS = 3000;
 const MAX_PICKED_ELEMENTS = 5;
 const MAX_AGENT_PROJECTS = 6;
+
+// Native glass cannot be removed from a live window, so every window follows the value read at launch.
+let startupTransparency: boolean | null = null;
+
+export function glassAtLaunch(settings: SettingsStore): boolean {
+  startupTransparency ??= settings.get().transparency;
+  return glassAvailable && startupTransparency;
+}
 
 export interface AppContext {
   icon: string;
@@ -117,6 +138,7 @@ export interface AppContext {
   siteProtections: SiteProtections;
   commandBar: CommandBar;
   findBar: FindBar;
+  welcome: WelcomeCard;
   history: HistoryStore;
   repoPrompt: RepoPrompt;
   dismissAnnouncement: () => void;
@@ -200,7 +222,7 @@ export class YalqenWindow {
   private pageArea: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
   private readonly preconnector: Preconnector;
   private layout: ChromeLayout = {
-    panelWidth: 180,
+    panelWidth: 170,
     panelSlide: 0,
     panelSide: 'left',
     chromeHeight: 44,
@@ -208,8 +230,9 @@ export class YalqenWindow {
     pageRadius: 16,
     newTabCenterOffset: 0,
   };
-  private glassApplied = glassAvailable;
+  private glassApplied: boolean;
   private revealed = false;
+  private revealPending = false;
   private htmlFullScreenTabId: string | null = null;
   private pushQueued = false;
   private lastPushedState = '';
@@ -223,9 +246,25 @@ export class YalqenWindow {
     private readonly app: AppContext,
     options: WindowOptions,
   ) {
+    this.glassApplied = glassAtLaunch(app.settings);
     this.isDeveloper = options.developer ?? false;
     this.isPrivate = this.isDeveloper || (options.isPrivate ?? false);
     this.webApp = this.isPrivate ? null : (options.webApp ?? null);
+    this.ui = new WebContentsView({
+      webPreferences: {
+        preload: preloadPath('preload'),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    this.uiContents = this.ui.webContents;
+    if (this.glassApplied) this.ui.setBackgroundColor('#00000000');
+    this.uiContents.on('will-navigate', (event) => event.preventDefault());
+    this.uiContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    // The first native window takes about 40 ms to create, so the interface loads meanwhile.
+    void this.uiContents.loadFile(rendererPath('index.html'), { query: { lang: getLocale() } });
+
     const from = options.from?.window.getBounds();
     this.window = new BaseWindow({
       width: from?.width ?? 1280,
@@ -236,23 +275,10 @@ export class YalqenWindow {
       title: `${this.isDeveloper ? t('window.titleDeveloper') : this.isPrivate ? t('window.titlePrivate') : 'Yalqen'} · ${app.persistentProfiles.currentName()}`,
       icon: app.icon,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-      transparent: glassAvailable,
+      transparent: this.glassApplied,
       show: false,
     });
-
-    this.ui = new WebContentsView({
-      webPreferences: {
-        preload: preloadPath('preload'),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    });
-    this.uiContents = this.ui.webContents;
     this.activeProjectId = this.addProject().id;
-    if (glassAvailable) this.ui.setBackgroundColor('#00000000');
-    this.uiContents.on('will-navigate', (event) => event.preventDefault());
-    this.uiContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     this.window.contentView.addChildView(this.ui);
 
     this.preconnector = new Preconnector((origin) =>
@@ -337,7 +363,7 @@ export class YalqenWindow {
           }) === 1
         );
       },
-      freezeBackground: () => app.settings.get().freezeBackgroundTabs,
+      freezeBackground: () => app.settings.get().discardAfterMinutes > 0,
       onChange: (persist) => {
         this.syncAgentProjectWithTab();
         if (this.htmlFullScreenTabId && this.htmlFullScreenTabId !== this.tabs.activeTabId) {
@@ -350,6 +376,7 @@ export class YalqenWindow {
         }
         this.findBar.keepOnTop(this.window);
         this.commandBar.keepOnTop(this.window);
+        app.welcome.keepOnTop(this.window);
         this.pushState();
         app.onWindowChange(persist);
       },
@@ -398,7 +425,6 @@ export class YalqenWindow {
       zoomFor: (url, isPrivate) => app.zoomFor(isPrivate).get(url),
       defaultZoom: () => app.settings.get().defaultZoom,
       hasOwnZoom: (url, isPrivate) => app.zoomFor(isPrivate).has(url),
-      pagePreferences: () => fontPreferences(app.settings.get().fontSize),
       onZoom: (url, factor, isPrivate) => app.zoomFor(isPrivate).set(url, factor),
       hasCertificateException: (url) => app.certificates.hasException(url),
       certificateToken: (url) => app.certificates.tokenFor(url),
@@ -456,7 +482,7 @@ export class YalqenWindow {
       this.applyLayout();
       if (this.window.isFullScreen() === fullScreen) return;
       fullScreen = !fullScreen;
-      if (fullScreen) void this.sendWallpaper();
+      if (fullScreen && this.glassApplied) void this.sendWallpaper();
       this.pushState();
     };
     this.window.on('resize', syncFullScreen);
@@ -467,9 +493,10 @@ export class YalqenWindow {
 
     nativeTheme.on('updated', this.pushState);
     this.uiContents.once('did-finish-load', () => {
-      this.glassApplied = applyGlass(this.window);
+      this.glassApplied = this.glassApplied && applyGlass(this.window);
       this.pushState();
-      void this.sendWallpaper();
+      // Only the full-screen glass backdrop draws the wallpaper, so its lookup waits for startup to settle.
+      if (this.glassApplied) setTimeout(() => void this.sendWallpaper(), WALLPAPER_PRELOAD_DELAY_MS);
     });
 
     this.window.on('close', (event) => {
@@ -516,7 +543,6 @@ export class YalqenWindow {
     else if (options.saved && options.saved.tabs.length > 0) this.tabs.restore(options.saved, options.url);
     else this.tabs.open(options.url);
 
-    void this.uiContents.loadFile(rendererPath('index.html'), { query: { lang: getLocale() } });
     app.onWindowFocus(this);
   }
 
@@ -592,10 +618,13 @@ export class YalqenWindow {
       panelSide: this.app.settings.get().panelSide,
       pinnedDisplay: this.app.settings.get().pinnedDisplay,
       sidebarVisible: this.webApp ? false : this.app.settings.get().sidebarVisible,
+      media: !this.webApp && this.app.settings.get().sidebarWidgets.includes('media') ? this.tabs.mediaState() : null,
       toolbarVisible: this.webApp ? true : this.app.settings.get().toolbarVisible,
-      toolbarTabs: this.webApp ? false : this.app.settings.get().toolbarTabs,
+      toolbarTabs: this.webApp ? false : !this.app.settings.get().sidebarVisible,
       toolbarButtons: this.webApp ? ['settings', 'downloads'] : this.app.settings.get().toolbarButtons,
       material: this.material(),
+      glassTint: this.app.settings.get().glassTint,
+      accent: accentHex(this.app.settings.get().accentColor),
       defaultZoom: this.app.settings.get().defaultZoom,
       downloads: this.app.downloads.summary(),
       extensions: !this.isPrivate,
@@ -760,9 +789,9 @@ export class YalqenWindow {
       onOutput: (target, output) => {
         if (isActive(target) && !this.uiContents.isDestroyed()) this.uiContents.send(IpcChannel.agentOutput, output);
       },
-      onChatUpdate: (target, snapshot) => {
+      onChatUpdate: (target, serialized) => {
         if (isActive(target) && !this.uiContents.isDestroyed())
-          this.uiContents.send(IpcChannel.agentChatUpdate, JSON.stringify(snapshot));
+          this.uiContents.send(IpcChannel.agentChatUpdate, serialized);
       },
       onUrl: (target, url) => {
         const id = this.tabs.open(url, { activate: false });
@@ -1237,15 +1266,24 @@ export class YalqenWindow {
         this.applyLayout();
       }
     }
-    this.reveal();
+    this.revealWhenPainted();
   }
 
-  // The window stays hidden until the chrome reports its real layout, so the page never
-  // appears at the default bounds first and then jumps.
+  // The window stays hidden until the chrome has its real layout and has drawn it, so the page
+  // never jumps from the default bounds and the glass never shows empty first.
+  private revealWhenPainted(): void {
+    if (this.revealPending || this.revealed) return;
+    this.revealPending = true;
+    // A page in a hidden window does not draw; without throttling it does, until the window is shown.
+    this.uiContents.setBackgroundThrottling(false);
+    void this.uiContents.executeJavaScript(FIRST_PAINT_SCRIPT).then(this.reveal, this.reveal);
+  }
+
   private reveal = (): void => {
     if (this.revealed || this.window.isDestroyed()) return;
     this.revealed = true;
     this.window.show();
+    if (!this.uiContents.isDestroyed()) this.uiContents.setBackgroundThrottling(true);
   };
 
   openAddress(): void {
@@ -1256,6 +1294,8 @@ export class YalqenWindow {
       placeholder: this.app.searchEngine().placeholder,
       mode: 'navigate',
       value: url === NEW_TAB_URL || url === 'about:blank' ? '' : url,
+      material: this.material(),
+      accent: accentHex(this.app.settings.get().accentColor),
     });
     if (!this.tabs.activeIsPrivate) setImmediate(() => this.app.history.index());
   }
@@ -1349,7 +1389,8 @@ export class YalqenWindow {
   }
 
   goHome(): void {
-    this.tabs.navigate(this.app.settings.get().homePageUrl ?? NEW_TAB_URL);
+    const { startupBehavior, startupUrls } = this.app.settings.get();
+    this.tabs.navigate(startupPages(startupBehavior, startupUrls, false)[0] ?? NEW_TAB_URL);
   }
 
   print(contents = this.tabs.activeContents()): void {
@@ -1496,6 +1537,15 @@ export class YalqenWindow {
       case 'toggle-mute':
         tabs.toggleMute(action.id);
         break;
+      case 'toggle-media':
+        tabs.toggleMedia(action.id);
+        break;
+      case 'seek-media':
+        tabs.seekMedia(action.id, action.seconds);
+        break;
+      case 'skip-media':
+        tabs.skipMedia(action.id, action.direction);
+        break;
       case 'open-tab-menu':
         this.openTabMenu(action.id);
         break;
@@ -1526,7 +1576,6 @@ export class YalqenWindow {
         this.popup(
           devMenuTemplate(tab, {
             run: (id) => this.runDevCommand(id),
-            openDevTools: () => tabs.openDevTools(),
             copyEpisode: (id) => clipboard.writeText(t('devMenu.episodePrompt', { id })),
             fixEpisode: () => void this.fixAgentEpisode(tab.id),
             copyPlaywrightTest: (id) => {
@@ -1603,7 +1652,7 @@ export class YalqenWindow {
                     void dialog.showMessageBox(this.window, { type: 'error', message: t(`profiles.${error}`) });
                 });
               },
-              manage: () => tabs.openSettings(),
+              manage: () => tabs.openSettings('#profiles'),
             },
           ),
         );
@@ -1661,7 +1710,7 @@ export class YalqenWindow {
         const id = this.tabs.activeTabId;
         const url = this.tabs.activeUrl;
         const current = () => this.tabs.activeTabId === id && this.tabs.activeUrl === url;
-        void this.tabs.certificateChain().then((chain) => showCertificateDetails(this.window, url, chain, current));
+        void showCertificateDetails(this.window, url, this.tabs.certificateChain(), current);
       },
       clearSiteData: () => this.runDevCommand('clear-site-data'),
     });
@@ -1820,6 +1869,7 @@ export class YalqenWindow {
   }
 
   private showWindowControls(): void {
+    if (process.platform !== 'darwin') return;
     this.window.setWindowButtonVisibility(this.app.settings.get().toolbarVisible || this.window.isFullScreen());
     if (!this.window.isFullScreen()) this.window.setWindowButtonPosition(WINDOW_CONTROLS_INSET);
   }
