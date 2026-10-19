@@ -86,7 +86,11 @@ try {
       const exit = await Promise.race([normal.exited, delay(500).then(() => null)]);
       assert.equal(exit, null, `AppImage exited before opening: ${normal.log()}`);
       found = await renderers(normal.child.pid);
-      if (found.length >= 2) break;
+      if (
+        found.length >= 2 &&
+        found.every((renderer) => /^NoNewPrivs:\s+1$/m.test(renderer.status) && /^Seccomp:\s+2$/m.test(renderer.status))
+      )
+        break;
     }
     assert.ok(found.length >= 2, `Expected the packaged browser to start renderers: ${normal.log()}`);
     for (const renderer of found) {
